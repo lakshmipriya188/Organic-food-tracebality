@@ -1,8 +1,8 @@
-"""Co-Op Member Deals and Offers page."""
+"""Co-Op Member Deals and Offers page for Organic Foods."""
 
 import streamlit as st
 from utils.cart_manager import go_to
-from products import get_products_by_tag
+from products import get_deals_products, get_products_by_tag
 from components.product_card import render_product_card
 
 
@@ -11,10 +11,19 @@ def render_deals_page():
         go_to("home")
         st.rerun()
 
-    st.markdown('<div style="font-size:0.85rem; font-weight:800; color:#00472B; letter-spacing:2px;">EXCLUSIVE OFFERS</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:2rem; font-weight:800; color:#00472B; margin-bottom:1.5rem;">Co-Op Member Deals & Discounts 🏷️</div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="font-family:'Poppins', sans-serif; font-size:0.82rem; font-weight:700; color:#16A34A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px;">
+            EXCLUSIVE OFFERS
+        </div>
+        <div style="font-family:'Poppins', sans-serif; font-size:2rem; font-weight:700; color:#1B4D3E; margin-bottom:1.5rem;">
+            Co-Op Member Deals & Discounts 🏷️
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    deals_products = get_products_by_tag("deal")
+    deals_products = get_deals_products()
     if not deals_products:
         st.info("No active promotional deals right now. Check back soon!")
         return

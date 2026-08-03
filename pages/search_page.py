@@ -1,4 +1,4 @@
-"""Search results page."""
+"""Search results page for Organic Foods."""
 
 import streamlit as st
 from utils.cart_manager import go_to
@@ -12,8 +12,17 @@ def render_search_page():
         st.rerun()
 
     query = st.session_state.get("search_query", "")
-    st.markdown('<div style="font-size:0.85rem; font-weight:800; color:#00472B; letter-spacing:2px;">SEARCH RESULTS</div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="font-size:2rem; font-weight:800; color:#00472B; margin-bottom:1.5rem;">Results for "{query}"</div>', unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div style="font-family:'Poppins', sans-serif; font-size:0.82rem; font-weight:700; color:#16A34A; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px;">
+            SEARCH RESULTS
+        </div>
+        <div style="font-family:'Poppins', sans-serif; font-size:2rem; font-weight:700; color:#1B4D3E; margin-bottom:1.5rem;">
+            Results for "{query}"
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     results = search_products(query)
     if not results:

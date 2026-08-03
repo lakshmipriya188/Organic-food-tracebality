@@ -1,28 +1,44 @@
-"""Classic Header and Navigation bar component for Organic Mandya."""
+"""Header and Navigation bar component for Organic Foods."""
 
 import streamlit as st
-from config import HELPLINE
+from config import HELPLINE, APP_NAME, APP_SUBTITLE
 from utils.cart_manager import _init_state, go_to, cart_count, wishlist_items
-from products import CATEGORIES
+from products import get_all_categories
 
 
 def render_header():
-    """Render Organic Mandya clean classic header and sub-navigation bar."""
+    """Render Organic Foods modern header and sub-navigation bar."""
     _init_state()
 
-    # TOP HEADER ROW
-    col_brand, col_search, col_pincode, col_actions = st.columns([2.8, 3.5, 2.2, 3])
+    # MAIN HEADER ROW (Brand, Search, Actions)
+    col_brand, col_search, col_actions = st.columns([3.0, 4.2, 4.8])
 
-    # 1. Brand Logo (Classic Serif + Clean Subtitle)
+    # 1. Brand Logo & Subtitle
     with col_brand:
         st.markdown(
-            """
-            <div style="cursor:pointer;" onclick="window.location.reload();">
-                <div style="font-family:'Georgia', serif; font-size:2.1rem; font-weight:800; color:#00472B; line-height:1.0; letter-spacing:-0.5px;">
-                    Organic Mandya
-                </div>
-                <div style="font-size:0.68rem; font-weight:700; color:#556B60; letter-spacing:3.5px; margin-top:4px;">
-                    PURE ROOTS · 100% ORGANIC
+            f"""
+            <div style="cursor:pointer; display:inline-block;" onclick="window.location.reload();">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="
+                        background: linear-gradient(135deg, #22C55E 0%, #15803D 100%);
+                        color: #FFFFFF;
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 14px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 1.5rem;
+                        box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
+                    ">🌱</div>
+                    <div>
+                        <div style="font-family:'Poppins', sans-serif; font-size: 1.9rem; font-weight: 800; color: #1B4D3E; line-height: 1.0; letter-spacing: -0.5px;">
+                            {APP_NAME}
+                        </div>
+                        <div style="font-family:'Poppins', sans-serif; font-size: 0.65rem; font-weight: 700; color: #16A34A; letter-spacing: 2.5px; margin-top: 3px; text-transform: uppercase;">
+                            {APP_SUBTITLE}
+                        </div>
+                    </div>
                 </div>
             </div>
             """,
@@ -34,7 +50,7 @@ def render_header():
         search_val = st.text_input(
             "Search",
             value=st.session_state.get("search_query", ""),
-            placeholder="Search organic rice, ghee, millets, oils...",
+            placeholder="🔍 Search organic rice, ghee, millets, cold pressed oils...",
             label_visibility="collapsed",
             key="header_search_input"
         )
@@ -44,23 +60,14 @@ def render_header():
                 go_to("search")
                 st.rerun()
 
-    # 3. Deliver to Pincode Box
-    with col_pincode:
-        pin = st.text_input(
-            "Pincode",
-            value=f"📍 Deliver to {st.session_state.deliver_pincode}",
-            label_visibility="collapsed",
-            key="pincode_display"
-        )
-
-    # 4. Header Actions: Wishlist, Cart, Account
+    # 3. Header Actions: Wishlist, Cart, Account
     with col_actions:
         w_count = len(wishlist_items())
         c_count = cart_count()
 
-        w_label = f"♡ Wishlist ({w_count})" if w_count > 0 else "♡ Wishlist"
+        w_label = f"❤️ Wishlist ({w_count})" if w_count > 0 else "🤍 Wishlist"
         c_label = f"🛒 Cart ({c_count})" if c_count > 0 else "🛒 Cart"
-        user_name = st.session_state.user.split("@")[0] if st.session_state.user else "Log in"
+        user_name = st.session_state.user.split(" ")[0] if st.session_state.user else "Log in"
         u_label = f"👤 {user_name}"
 
         act_col1, act_col2, act_col3 = st.columns(3)
@@ -77,43 +84,32 @@ def render_header():
                 go_to("account")
                 st.rerun()
 
-    st.markdown("<div style='margin-bottom: 0.8rem;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 0.6rem;'></div>", unsafe_allow_html=True)
 
-    # SUB-NAVBAR ROW (Cleaned: Browse Categories, Store Locations, Deals, Customer Helpline)
-    sub_col1, sub_col2, sub_col3, sub_col4 = st.columns([3, 1.8, 1.6, 3.6])
+    # SUB-NAVBAR ROW (Browse Categories, Store Locations)
+    sub_col1, sub_col2, _ = st.columns([3.5, 1.8, 4.7])
 
-    # Browse All Categories Dropdown
+    # Browse Categories Dropdown
     with sub_col1:
+        categories_list = get_all_categories()
+        cat_name_map = {c.name: c for c in categories_list}
         selected_cat = st.selectbox(
             "Browse Categories",
-            options=["🟢 Browse All Categories"] + [c.name for c in CATEGORIES],
+            options=["🌿 Browse All Categories"] + list(cat_name_map.keys()),
             label_visibility="collapsed",
             key="cat_dropdown"
         )
-        if selected_cat != "🟢 Browse All Categories":
-            cat_obj = next((c for c in CATEGORIES if c.name == selected_cat), None)
+        if selected_cat != "🌿 Browse All Categories":
+            cat_obj = cat_name_map.get(selected_cat)
             if cat_obj:
+                st.session_state["active_category_id"] = cat_obj.category_id
                 go_to("category", active_category=cat_obj.slug)
                 st.rerun()
 
     # Store Locations Link
     with sub_col2:
-        if st.button("Store Locations", key="nav_stores", use_container_width=True):
+        if st.button("📍 Stores", key="nav_stores", use_container_width=True):
             go_to("store_locations")
             st.rerun()
 
-    # Deals Link
-    with sub_col3:
-        if st.button("Deals", key="nav_deals", use_container_width=True):
-            go_to("deals")
-            st.rerun()
-
-    # Customer Support Phone
-    with sub_col4:
-        st.markdown(
-            f'<div style="text-align:right; font-weight:700; color:#00472B; font-size:0.95rem; padding-top:6px;">'
-            f'🎧 Customer Support: {HELPLINE}</div>',
-            unsafe_allow_html=True
-        )
-
-    st.markdown("<hr style='border:0; height:1px; background:#e2e8f0; margin: 0.8rem 0 1.5rem 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 0.8rem 0 1.5rem 0;'>", unsafe_allow_html=True)

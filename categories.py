@@ -1,50 +1,71 @@
-"""Shop by category section matching Organic Mandya reference Image 2."""
+"""Shop by category section displaying categories loaded dynamically from MySQL Category table."""
 
 import streamlit as st
-from products import CATEGORIES
+from products import get_all_categories
 from utils.cart_manager import go_to
+from utils.image_utils import get_image_src
 
 
-def render_categories(columns_per_row: int = 8):
-    """Render 16 categories in an 8-column responsive grid matching Image 2."""
-    
+def render_categories(columns_per_row: int = 5):
+    """Render categories in a clean grid loaded from MySQL Category table."""
+    categories = get_all_categories()
+
     st.markdown(
         """
-        <div style="font-size: 0.85rem; font-weight: 800; color: #00472B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px;">
-            BROWSE
+        <div style="font-family: 'Poppins', sans-serif; font-size: 0.82rem; font-weight: 700; color: #16A34A; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px;">
+            BROWSE CATEGORIES
         </div>
-        <div style="font-size: 2rem; font-weight: 800; color: #00472B; margin-bottom: 1.5rem;">
-            Shop by category
+        <div style="font-family: 'Poppins', sans-serif; font-size: 2rem; font-weight: 700; color: #1B4D3E; margin-bottom: 1.5rem;">
+            Shop by Organic Category 🌿
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # Display Categories in rows of 8
-    for row_start in range(0, len(CATEGORIES), columns_per_row):
-        row_cats = CATEGORIES[row_start : row_start + columns_per_row]
+    if not categories:
+        st.info("No categories found in the database.")
+        return
+
+    # Display Categories in rows
+    for row_start in range(0, len(categories), columns_per_row):
+        row_cats = categories[row_start : row_start + columns_per_row]
         cols = st.columns(columns_per_row)
         
         for col, cat in zip(cols, row_cats):
+            img_src = get_image_src(cat.image_url)
             with col:
                 st.markdown(
                     f"""
                     <div style="
-                        background-color: #F3F6F3;
-                        border-radius: 16px;
-                        padding: 1rem 0.5rem;
+                        background-color: #FFFFFF;
+                        border-radius: 18px;
+                        padding: 0.9rem;
                         text-align: center;
-                        transition: transform 0.2s ease;
-                        margin-bottom: 8px;
+                        border: 1px solid #E2E9E3;
+                        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+                        margin-bottom: 10px;
+                        transition: transform 0.25s ease, box-shadow 0.25s ease;
+                        height: 140px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
                     ">
-                        <img src="{cat.image_url}" style="width: 100%; height: 95px; object-fit: cover; border-radius: 10px; margin-bottom: 6px;">
+                        <img src="{img_src}" style="
+                            width: 100%;
+                            height: 120px;
+                            object-fit: cover;
+                            border-radius: 12px;
+                            transition: transform 0.3s ease;
+                        ">
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
                 
                 # Category Name Clickable Button
-                if st.button(cat.name, key=f"cat_grid_btn_{cat.slug}", use_container_width=True):
+                if st.button(cat.name, key=f"cat_grid_btn_{cat.category_id}_{cat.slug}", use_container_width=True):
+                    st.session_state["active_category_id"] = cat.category_id
                     go_to("category", active_category=cat.slug)
                     st.rerun()
 

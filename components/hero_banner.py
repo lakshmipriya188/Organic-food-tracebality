@@ -1,22 +1,25 @@
-"""Hero banner component matching Organic Mandya reference Image 1."""
+"""Hero banner component for Organic Foods."""
 
 import streamlit as st
 from utils.cart_manager import go_to
+from utils.image_utils import get_image_src
 
 
 def render_hero_banner():
-    """Render the hero section with millet showcase and bottom value prop strip."""
+    """Render the hero section with organic produce showcase and value prop strip."""
     
     # Outer Hero Container
     st.markdown(
         """
         <div style="
-            background: linear-gradient(135deg, #EBF5F0 0%, #D8EAE0 100%);
+            background: linear-gradient(135deg, #0F382C 0%, #1B4D3E 50%, #166534 100%);
             border-radius: 24px;
-            padding: 3rem 3rem 2rem 3rem;
+            padding: 3.2rem 3rem 2.5rem 3rem;
             margin-bottom: 0px;
             position: relative;
-            box-shadow: 0 4px 20px rgba(0, 71, 43, 0.05);
+            box-shadow: 0 15px 35px rgba(15, 56, 44, 0.2);
+            color: #FFFFFF;
+            overflow: hidden;
         ">
         """,
         unsafe_allow_html=True
@@ -27,59 +30,64 @@ def render_hero_banner():
     with h_col1:
         st.markdown(
             """
-            <div style="font-size: 0.82rem; font-weight: 800; color: #00472B; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 0.8rem;">
-                ANCIENT GRAINS · MODERN PLATES
+            <div style="
+                display: inline-block;
+                background: rgba(34, 197, 94, 0.2);
+                border: 1px solid rgba(34, 197, 94, 0.4);
+                padding: 4px 14px;
+                border-radius: 20px;
+                font-size: 0.78rem;
+                font-weight: 800;
+                color: #86EFAC;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+                margin-bottom: 1.2rem;
+            ">
+                🌱 100% CERTIFIED PURE ORGANIC
             </div>
-            <div style="font-size: 2.8rem; font-weight: 800; color: #00472B; line-height: 1.15; letter-spacing: -1px; margin-bottom: 1.2rem;">
-                Millets, the way<br>they were meant to<br>be.
+            <div style="font-family: 'Poppins', sans-serif; font-size: 2.8rem; font-weight: 800; color: #FFFFFF; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 1.2rem;">
+                Pure Organic Foods,<br><span style="color: #86EFAC;">Direct From Farm To Fork.</span>
             </div>
-            <div style="font-size: 1.05rem; color: #4A5D54; line-height: 1.5; margin-bottom: 2rem; max-width: 480px;">
-                Foxtail, Browntop, Ragi and Proso — single-origin millets grown by our farmer cooperative and milled fresh so the goodness stays in.
+            <div style="font-size: 1.05rem; color: #E2E8F0; line-height: 1.6; margin-bottom: 2rem; max-width: 500px;">
+                Experience the authentic taste of unadulterated nature across our 10 certified organic categories — harvested at peak nutrition with full batch traceability.
             </div>
             """,
             unsafe_allow_html=True
         )
 
-        if st.button("Shop millets", key="hero_shop_millets_btn"):
-            go_to("category", active_category="millets")
+        if st.button("🌿 Explore Fresh Organic Harvest", key="hero_shop_all_btn"):
+            go_to("home")
             st.rerun()
 
-        st.markdown(
-            """
-            <div style="margin-top: 2rem; font-size: 0.9rem; color: #00472B; letter-spacing: 4px;">
-                <span style="color:#00472B;">●</span> <span style="color:#A3C4B3;">○ ○ ○</span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
     with h_col2:
-        # 4 Millet Pouches Showcase
+        # 4 Organic Category Cards Showcase with glassmorphism
         m_col1, m_col2, m_col3, m_col4 = st.columns(4)
         
         pouches = [
-            ("Foxtail Millet", "500g", "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=300&auto=format&fit=crop&q=80"),
-            ("Browntop Millet", "500g", "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&auto=format&fit=crop&q=80"),
-            ("Ragi", "1kg", "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&auto=format&fit=crop&q=80"),
-            ("Proso Millet", "500g", "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=300&auto=format&fit=crop&q=80"),
+            ("Fruits", "Fresh Organic", get_image_src("assets/images/fruits.jpg")),
+            ("Vegetables", "Farm Fresh", get_image_src("assets/images/vegetables.jpg")),
+            ("Millets", "Ancient Grains", get_image_src("assets/images/millets.jpg")),
+            ("Oils", "Pure Ghani", get_image_src("assets/images/oils.jpg")),
         ]
 
-        for col, (name, size, img_url) in zip([m_col1, m_col2, m_col3, m_col4], pouches):
+        for col, (name, size, img_src) in zip([m_col1, m_col2, m_col3, m_col4], pouches):
             with col:
                 st.markdown(
                     f"""
                     <div style="
-                        background: rgba(255,255,255,0.7);
-                        backdrop-filter: blur(8px);
-                        border: 1px solid rgba(255,255,255,0.8);
-                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.12);
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                        border: 1px solid rgba(255, 255, 255, 0.25);
+                        border-radius: 18px;
                         padding: 0.8rem;
                         text-align: center;
-                        box-shadow: 0 8px 16px rgba(0,0,0,0.04);
+                        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                        transition: transform 0.3s ease;
                     ">
-                        <img src="{img_url}" style="width: 100%; height: 130px; object-fit: cover; border-radius: 12px; margin-bottom: 8px;">
-                        <div style="font-size: 0.78rem; font-weight: 800; color: #00472B; text-transform: uppercase;">{name}</div>
-                        <div style="font-size: 0.7rem; color: #666;">{size}</div>
+                        <img src="{img_src}" style="width: 100%; height: 130px; object-fit: cover; border-radius: 12px; margin-bottom: 8px;">
+                        <div style="font-size: 0.82rem; font-weight: 800; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.5px;">{name}</div>
+                        <div style="font-size: 0.72rem; color: #86EFAC; font-weight: 600;">{size}</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -87,13 +95,13 @@ def render_hero_banner():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Bottom Dark Green Feature Strip (Image 1)
+    # Bottom Organic Feature Strip
     st.markdown(
         """
         <div style="
-            background-color: #00472B;
+            background-color: #166534;
             border-radius: 0 0 20px 20px;
-            padding: 0.9rem 2rem;
+            padding: 1rem 2rem;
             margin-top: -15px;
             margin-bottom: 2.5rem;
             color: #FFFFFF;
@@ -103,10 +111,14 @@ def render_hero_banner():
             font-size: 0.85rem;
             font-weight: 700;
             letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(22, 101, 52, 0.2);
+            flex-wrap: wrap;
+            gap: 10px;
         ">
-            <div style="display:inline-block; margin-right: 2rem;">⚡ HIGH PROTEIN</div>
-            <div style="display:inline-block; margin-right: 2rem;">🩺 LOW GLYCEMIC INDEX</div>
-            <div style="display:inline-block;">👨‍🌾 SUPPORTS LOCAL FARMERS</div>
+            <div>⚡ 100% PESTICIDE-FREE</div>
+            <div>🩺 NABL AUDITED LAB REPORTS</div>
+            <div>👨‍🌾 DIRECT FARMER COOPERATIVE</div>
+            <div>🚚 SAME-DAY EXPRESS HARVEST</div>
         </div>
         """,
         unsafe_allow_html=True
