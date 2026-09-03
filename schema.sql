@@ -37,16 +37,34 @@ INSERT IGNORE INTO Category(category_id, category_name, description) VALUES
 
 -- Seed Default Products matching category_id with category-specific units
 INSERT IGNORE INTO Product(product_id, category_id, product_name, price, unit, manufacture_date, expiry_date, quantity, discount, onboarding_date, manufacturer_name) VALUES
-(1, 1, 'Organic Fresh Fruits', 120.00, 'kg', '2026-07-20', '2026-08-05', 50, 14.00, '2026-07-01', 'Mandya Organic Fruit Orchards'),
-(2, 2, 'Organic Farm Vegetables', 85.00, 'kg', '2026-07-25', '2026-08-02', 100, 10.00, '2026-07-01', 'Maddur Riverbank Farms'),
-(3, 3, 'Organic Whole Grains', 150.00, 'kg', '2026-07-10', '2027-07-10', 200, 0.00, '2026-07-01', 'Mysuru Heritage Paddy Farms'),
-(4, 4, 'Organic Native Pulses', 180.00, 'kg', '2026-07-12', '2027-01-12', 150, 10.00, '2026-07-01', 'Kalaburagi Pulse Collective'),
-(5, 5, 'Organic Pure A2 Milk', 95.00, 'L', '2026-07-28', '2026-07-31', 40, 0.00, '2026-07-01', 'Pandavapura Bilona Dairy'),
-(6, 6, 'Organic Aromatic Spices', 210.00, '250g', '2026-07-05', '2027-07-05', 80, 8.00, '2026-07-01', 'Sirsi Spice Hills Garden'),
-(7, 7, 'Organic Herbal Beverage', 135.00, '1L bottle', '2026-07-18', '2026-10-18', 60, 0.00, '2026-07-01', 'Chikmagalur Herbal Valley'),
-(8, 8, 'Organic Premium Almonds', 450.00, '500g', '2026-07-08', '2027-07-08', 90, 10.00, '2026-07-01', 'Kolar Organic Nut Growers'),
-(9, 9, 'Organic Ancient Foxtail Millet', 160.00, 'kg', '2026-07-14', '2027-01-14', 120, 0.00, '2026-07-01', 'Nagamangala Rainfed Farms'),
-(10, 10, 'Organic Cold Pressed Mustard Oil', 320.00, '1L', '2026-07-22', '2027-07-22', 75, 8.00, '2026-07-01', 'Challakere Wooden Ghani Mill');
+(1, 1, 'Organic Royal Gala Apple', 180.00, 'kg', '2026-07-20', '2026-08-05', 50, 10.00, '2026-07-01', 'Mandya Organic Orchards'),
+(2, 1, 'Organic Robusta Banana', 60.00, 'kg', '2026-07-22', '2026-07-30', 80, 8.00, '2026-07-01', 'Maddur Riverbank Orchards'),
+(3, 1, 'Organic Alphonso Mango', 350.00, 'kg', '2026-07-15', '2026-07-28', 40, 12.00, '2026-07-01', 'Ratnagiri Heritage Mango Groves'),
+(4, 1, 'Organic Nagpur Orange', 90.00, 'kg', '2026-07-18', '2026-08-08', 60, 10.00, '2026-07-01', 'Nagpur Citrus Growers Co-op'),
+(5, 1, 'Organic Red Pomegranate', 220.00, 'kg', '2026-07-19', '2026-08-15', 45, 12.00, '2026-07-01', 'Solapur Organic Farms'),
+(6, 1, 'Organic Pink Guava', 80.00, 'kg', '2026-07-21', '2026-08-01', 55, 6.00, '2026-07-01', 'Kolar Fruit Growers'),
+(7, 1, 'Organic Hybrid Watermelon', 40.00, 'kg', '2026-07-24', '2026-08-10', 70, 10.00, '2026-07-01', 'Challakere Riverbed Farms'),
+(8, 1, 'Organic Pink Dragon Fruit', 250.00, 'kg', '2026-07-23', '2026-08-07', 30, 14.00, '2026-07-01', 'Deccan Exotic Fruit Farms'),
+(9, 1, 'Organic Queen Pineapple', 110.00, 'kg', '2026-07-17', '2026-08-07', 40, 8.00, '2026-07-01', 'Shivamogga Foothill Orchards'),
+(10, 1, 'Organic Sweet Lime (Mosambi)', 95.00, 'kg', '2026-07-20', '2026-08-10', 50, 9.00, '2026-07-01', 'Anantapur Fruit Orchards'),
+(11, 2, 'Organic Country Tomato', 45.00, 'kg', '2026-07-25', '2026-08-05', 100, 10.00, '2026-07-01', 'Maddur Riverbank Farms'),
+(12, 2, 'Organic Fresh Potato', 35.00, 'kg', '2026-07-20', '2026-08-20', 120, 12.00, '2026-07-01', 'Hassan Organic Potato Growers'),
+(13, 2, 'Organic Red Onion', 40.00, 'kg', '2026-07-18', '2026-08-30', 150, 11.00, '2026-07-01', 'Chitradurga Farm Collective'),
+(14, 2, 'Organic Farm Carrot', 60.00, 'kg', '2026-07-24', '2026-08-10', 90, 14.00, '2026-07-01', 'Ooty Hill Organic Orchards'),
+(15, 2, 'Organic Green Cabbage', 30.00, 'kg', '2026-07-26', '2026-08-08', 80, 14.00, '2026-07-01', 'Kolar Veg Growers'),
+(16, 2, 'Organic Fresh Cauliflower', 50.00, 'kg', '2026-07-25', '2026-08-03', 70, 9.00, '2026-07-01', 'Belagavi Farm Co-Op'),
+(17, 2, 'Organic Green Capsicum', 80.00, 'kg', '2026-07-23', '2026-08-04', 65, 11.00, '2026-07-01', 'Mandya Polyhouse Organic Farms'),
+(18, 2, 'Organic Purple Brinjal', 40.00, 'kg', '2026-07-22', '2026-08-02', 75, 11.00, '2026-07-01', 'Tumakuru Farm Collective'),
+(19, 2, 'Organic Ruby Beetroot', 50.00, 'kg', '2026-07-21', '2026-08-15', 85, 9.00, '2026-07-01', 'Chikkaballapur Organic Belt'),
+(20, 2, 'Organic Sweet Corn', 45.00, 'kg', '2026-07-24', '2026-08-06', 110, 10.00, '2026-07-01', 'Davanagere Grain & Produce Co-op'),
+(21, 3, 'Organic Whole Grains', 150.00, 'kg', '2026-07-10', '2027-07-10', 200, 0.00, '2026-07-01', 'Mysuru Heritage Paddy Farms'),
+(22, 4, 'Organic Native Pulses', 180.00, 'kg', '2026-07-12', '2027-01-12', 150, 10.00, '2026-07-01', 'Kalaburagi Pulse Collective'),
+(23, 5, 'Organic Pure A2 Milk', 95.00, 'L', '2026-07-28', '2026-07-31', 40, 0.00, '2026-07-01', 'Pandavapura Bilona Dairy'),
+(24, 6, 'Organic Aromatic Spices', 210.00, 'g', '2026-07-05', '2027-07-05', 80, 8.00, '2026-07-01', 'Sirsi Spice Hills Garden'),
+(25, 7, 'Organic Herbal Beverage', 135.00, 'L', '2026-07-18', '2026-10-18', 60, 0.00, '2026-07-01', 'Chikmagalur Herbal Valley'),
+(26, 8, 'Organic Premium Almonds', 450.00, 'g', '2026-07-08', '2027-07-08', 90, 10.00, '2026-07-01', 'Kolar Organic Nut Growers'),
+(27, 9, 'Organic Ancient Foxtail Millet', 160.00, 'kg', '2026-07-14', '2027-01-14', 120, 0.00, '2026-07-01', 'Nagamangala Rainfed Farms'),
+(28, 10, 'Organic Cold Pressed Mustard Oil', 320.00, 'L', '2026-07-22', '2027-07-22', 75, 8.00, '2026-07-01', 'Challakere Wooden Ghani Mill');
 
 -- Customer Details Table
 CREATE TABLE IF NOT EXISTS Customer_Details (
