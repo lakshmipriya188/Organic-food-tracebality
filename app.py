@@ -178,6 +178,24 @@ def inject_classic_styles():
             color: #1B4D3E !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
+
+        /* Uniform Product Card Image Styling */
+        div[data-testid="stImage"] {
+            text-align: center;
+            background-color: #F8FAF8;
+            border-radius: 14px;
+            padding: 6px;
+            border: 1px solid #EEF3EF;
+            margin-bottom: 0.6rem;
+        }
+        div[data-testid="stImage"] img {
+            height: 160px !important;
+            max-height: 160px !important;
+            min-height: 160px !important;
+            width: 100% !important;
+            object-fit: contain !important;
+            border-radius: 10px !important;
+        }
         </style>
         """,
         unsafe_allow_html=True

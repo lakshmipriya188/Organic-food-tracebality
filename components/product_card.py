@@ -1,5 +1,6 @@
 """Product card component displaying clean price, discount badge, wishlist action, and icons from product_icons folder."""
 
+import os
 import streamlit as st
 from config import CURRENCY
 from utils.cart_manager import add_to_cart, is_in_wishlist, toggle_wishlist
@@ -11,44 +12,24 @@ def render_product_card(product, key_prefix: str = "prod"):
     
     in_wish = is_in_wishlist(product.id)
     heart_symbol = "❤️" if in_wish else "♡"
-    img_src = get_image_src(product.image_url)
+    
+    # Target image file path for native Streamlit rendering or base64 fallback
+    image_target = product.image_url if (product.image_url and os.path.exists(product.image_url)) else get_image_src(product.image_url)
 
     with st.container():
-        # Outer Card Wrapper
-        st.markdown(
-            f"""
-            <div style="
-                background-color: #FFFFFF;
-                border: 1px solid #E2E9E3;
-                border-radius: 18px;
-                padding: 1.1rem;
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                position: relative;
-                box-shadow: 0 8px 20px rgba(27, 77, 62, 0.04);
-                transition: all 0.25s ease;
-            ">
-            """,
-            unsafe_allow_html=True
-        )
-
         # Discount Badge top-left
         if product.discount_pct and product.discount_pct > 0:
             st.markdown(
                 f"""
                 <div style="
-                    position: absolute;
-                    top: 14px;
-                    left: 14px;
+                    display: inline-block;
                     background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%);
                     color: #FFFFFF;
                     font-size: 0.72rem;
                     font-weight: 800;
                     padding: 4px 10px;
                     border-radius: 20px;
-                    z-index: 2;
+                    margin-bottom: 6px;
                     letter-spacing: 0.5px;
                     box-shadow: 0 2px 8px rgba(225, 29, 72, 0.25);
                 ">
@@ -58,29 +39,8 @@ def render_product_card(product, key_prefix: str = "prod"):
                 unsafe_allow_html=True
             )
 
-        # Product Icon Image Container
-        st.markdown(
-            f"""
-            <div style="
-                text-align: center;
-                margin-bottom: 0.8rem;
-                background: #F8FAF8;
-                border-radius: 14px;
-                padding: 0.6rem;
-                border: 1px solid #EEF3EF;
-                overflow: hidden;
-            ">
-                <img src="{img_src}" style="
-                    width: 100%;
-                    height: 150px;
-                    object-fit: contain;
-                    border-radius: 10px;
-                    transition: transform 0.3s ease;
-                ">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        # Product Image (Rendered natively via st.image for 100% reliable display on screen)
+        st.image(image_target, use_container_width=True)
 
         # Product Title
         st.markdown(
@@ -93,6 +53,7 @@ def render_product_card(product, key_prefix: str = "prod"):
                 line-height: 1.35;
                 height: 2.6rem;
                 overflow: hidden;
+                margin-top: 0.4rem;
                 margin-bottom: 0.4rem;
             ">
                 {product.name}
@@ -139,7 +100,7 @@ def render_product_card(product, key_prefix: str = "prod"):
             label_visibility="collapsed"
         )
 
-        # Action Buttons Row: Add to Cart & Wishlist (No Trace Button)
+        # Action Buttons Row: Add to Cart & Wishlist
         col_add, col_wish = st.columns([1.1, 1])
 
         with col_add:
@@ -153,5 +114,3 @@ def render_product_card(product, key_prefix: str = "prod"):
             if st.button(w_text, key=f"{key_prefix}_wish_{product.id}", use_container_width=True):
                 toggle_wishlist(product)
                 st.rerun()
-
-        st.markdown("</div>", unsafe_allow_html=True)

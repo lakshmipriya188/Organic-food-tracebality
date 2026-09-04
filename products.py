@@ -54,12 +54,15 @@ class Product:
 
 def get_default_unit_for_category(category_id: int, product_name: str = "") -> str:
     """Return unit measure ('kg', 'g', or 'L') for products based on category and physical state.
-    - Category 1 (Fruits) & Category 2 (Vegetables): strictly kg
+    - Category 1 (Fruits), Category 2 (Vegetables), Category 3 (Grains), Category 4 (Pulses) & Category 6 (Spices): strictly kg
+    - Category 5 (Dairy) & Category 7 (Beverages): strictly L (Litres)
     - Solid items: kg or g
     - Liquid items: L (Litre)
     """
-    if category_id in (1, 2):
+    if category_id in (1, 2, 3, 4, 6):
         return "kg"
+    if category_id in (5, 7):
+        return "L"
 
     p_lower = product_name.lower()
     
@@ -73,7 +76,7 @@ def get_default_unit_for_category(category_id: int, product_name: str = "") -> s
         return "L"
     
     # Solid items (g or kg)
-    if category_id in (6, 8) or any(k in p_lower for k in ["powder", "spice", "cardamom", "clove", "cinnamon", "butter", "cheese", "yogurt", "cream"]):
+    if category_id in (8) or any(k in p_lower for k in ["powder", "spice", "cardamom", "clove", "cinnamon", "butter", "cheese", "yogurt", "cream"]):
         return "g"
         
     return "kg"
@@ -81,10 +84,13 @@ def get_default_unit_for_category(category_id: int, product_name: str = "") -> s
 
 def get_variants_for_unit(unit: str, category_id: int = 1, product_name: str = "") -> List[str]:
     """Return standard measures formatted for liquid (L/mL) vs solid (g/kg).
-    For Category 1 (Fruits) & Category 2 (Vegetables), variants are strictly in kg.
+    For Category 1 (Fruits), Category 2 (Vegetables), Category 3 (Grains), Category 4 (Pulses) & Category 6 (Spices), variants are strictly in kg.
+    For Category 5 (Dairy) & Category 7 (Beverages), variants are strictly in litres (1L, 2L, 5L).
     """
-    if category_id in (1, 2):
+    if category_id in (1, 2, 3, 4, 6):
         return ["1kg", "2kg", "5kg"]
+    if category_id in (5, 7):
+        return ["1L", "2L", "5L"]
 
     p_lower = product_name.lower()
     u = unit.lower().strip()
@@ -104,8 +110,9 @@ def find_product_icon(product_name: str) -> str:
     if not os.path.exists(icon_dir):
         return "assets/images/fruits.jpg"
 
+    raw_name = product_name.strip()
     clean_name = (
-        product_name.replace("Organic ", "")
+        raw_name.replace("Organic ", "")
         .replace("Fresh ", "")
         .replace("Pure ", "")
         .replace("Ancient ", "")
@@ -116,20 +123,41 @@ def find_product_icon(product_name: str) -> str:
     )
 
     files = os.listdir(icon_dir)
-    candidates = [product_name.replace(" ", "_"), clean_name.replace(" ", "_")]
+    candidates = [
+        raw_name,
+        clean_name,
+        raw_name.replace("_", " "),
+        clean_name.replace("_", " "),
+        raw_name.replace(" ", "_"),
+        clean_name.replace(" ", "_"),
+    ]
 
     # 1. Exact match (case insensitive)
     for c in candidates:
+        if not c:
+            continue
+        c_lower = c.lower().strip()
         for f in files:
-            name_no_ext = os.path.splitext(f)[0]
-            if c.lower() == name_no_ext.lower():
+            name_no_ext = os.path.splitext(f)[0].lower().strip()
+            if c_lower == name_no_ext:
                 return f"{icon_dir}/{f}"
 
-    # 2. Substring match
+    # 2. Substring match (case insensitive)
     for c in candidates:
+        if not c or len(c.strip()) < 3:
+            continue
+        c_lower = c.lower().strip()
         for f in files:
-            name_no_ext = os.path.splitext(f)[0]
-            if c.lower() in name_no_ext.lower() or name_no_ext.lower() in c.lower():
+            name_no_ext = os.path.splitext(f)[0].lower().strip()
+            if c_lower in name_no_ext or name_no_ext in c_lower:
+                return f"{icon_dir}/{f}"
+
+    # 3. Individual word token matching
+    words = [w.lower() for w in clean_name.split() if len(w) > 2]
+    for w in words:
+        for f in files:
+            name_no_ext = os.path.splitext(f)[0].lower().strip()
+            if w in name_no_ext:
                 return f"{icon_dir}/{f}"
 
     return "assets/images/fruits.jpg"
@@ -149,7 +177,7 @@ FALLBACK_CATEGORIES = [
     Category(10, "Oils", "oils", "Traditional Wooden Cold-Pressed Oils", "assets/images/oils.jpg"),
 ]
 
-# Default static fallback products with category-specific units and measures (1kg, 2kg, 5kg for Category 1 & 2)
+# Default static fallback products with category-specific units and measures (1kg/2kg/5kg for Cat 1-4 & 6, 1L/2L/5L for Cat 5 & 7)
 FALLBACK_PRODUCTS = [
     # Category 1: 10 Fruits (units in kg, variants in kg only)
     Product(
@@ -313,55 +341,412 @@ FALLBACK_PRODUCTS = [
         description="Juicy golden kernels of farm-fresh organic sweet corn.",
         variants=["1kg", "2kg", "5kg"]
     ),
-    # Other Categories
+    # Category 3: 10 Grains (units in kg, variants in kg only)
     Product(
-        id="21", category_id=3, name="Organic Whole Grains", slug="grains", category_slug="grains",
-        price=150.00, unit="kg", original_price=175.00, coop_price=135.00, discount_pct=0,
+        id="21", category_id=3, name="Organic Unpolished Brown Rice", slug="brown-rice", category_slug="grains",
+        price=150.00, unit="kg", original_price=175.00, coop_price=135.00, discount_pct=14,
         image_url=find_product_icon("Brown Rice"), quantity=200, manufacture_date="2026-07-10",
         expiry_date="2027-07-10", onboarding_date="2026-07-01", manufacturer_name="Mysuru Heritage Paddy Farms",
-        description="Unpolished traditional whole grains packed with natural fiber and nutrients.",
-        variants=["250g", "500g", "1kg"]
+        description="Unpolished traditional brown rice rich in natural bran fiber.",
+        variants=["1kg", "2kg", "5kg"]
     ),
     Product(
-        id="13", category_id=4, name="Organic Native Pulses", slug="pulses", category_slug="pulses",
+        id="22", category_id=3, name="Organic Khapli Whole Wheat", slug="wheat", category_slug="grains",
+        price=85.00, unit="kg", original_price=95.00, coop_price=76.50, discount_pct=10,
+        image_url=find_product_icon("Wheat"), quantity=250, manufacture_date="2026-07-12",
+        expiry_date="2027-07-12", onboarding_date="2026-07-01", manufacturer_name="Bagalkot Native Farmers Co-Op",
+        description="Ancient low-GI emmer whole wheat grains.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="23", category_id=3, name="Organic Pearl Barley Grain", slug="barley", category_slug="grains",
+        price=110.00, unit="kg", original_price=125.00, coop_price=99.00, discount_pct=12,
+        image_url=find_product_icon("Barley"), quantity=140, manufacture_date="2026-07-14",
+        expiry_date="2027-07-14", onboarding_date="2026-07-01", manufacturer_name="Himalayan Valley Organics",
+        description="Nutrient-dense cooling pearl barley grains.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="24", category_id=3, name="Organic Raw Buckwheat (Kuttu)", slug="buckwheat", category_slug="grains",
+        price=160.00, unit="kg", original_price=180.00, coop_price=144.00, discount_pct=11,
+        image_url=find_product_icon("Buckwheat"), quantity=110, manufacture_date="2026-07-16",
+        expiry_date="2027-07-16", onboarding_date="2026-07-01", manufacturer_name="Uttarakhand Mountain Produce",
+        description="Gluten-free nutrient-rich raw buckwheat grains.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="25", category_id=3, name="Organic White Quinoa Grain", slug="quinoa", category_slug="grains",
+        price=280.00, unit="kg", original_price=320.00, coop_price=252.00, discount_pct=12,
+        image_url=find_product_icon("Quinoa"), quantity=90, manufacture_date="2026-07-18",
+        expiry_date="2027-07-18", onboarding_date="2026-07-01", manufacturer_name="Deccan Plateau Quinoa Project",
+        description="Complete protein-rich royal white quinoa seeds.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="26", category_id=3, name="Organic Whole Rolled Oats", slug="oats", category_slug="grains",
+        price=190.00, unit="kg", original_price=210.00, coop_price=171.00, discount_pct=9,
+        image_url=find_product_icon("Oats"), quantity=130, manufacture_date="2026-07-20",
+        expiry_date="2027-07-20", onboarding_date="2026-07-01", manufacturer_name="Nilgiri Organic Grain Mill",
+        description="Heart-healthy fiber rich organic rolled oats.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="27", category_id=3, name="Organic Whole Rye Grain", slug="rye", category_slug="grains",
+        price=140.00, unit="kg", original_price=155.00, coop_price=126.00, discount_pct=10,
+        image_url=find_product_icon("Rye"), quantity=100, manufacture_date="2026-07-22",
+        expiry_date="2027-07-22", onboarding_date="2026-07-01", manufacturer_name="Coorg Organic Grain Guild",
+        description="Traditional wholesome organic rye grains.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="28", category_id=3, name="Organic Jowar Whole Grain", slug="sorghum", category_slug="grains",
+        price=95.00, unit="kg", original_price=105.00, coop_price=85.50, discount_pct=9,
+        image_url=find_product_icon("Sorghum"), quantity=180, manufacture_date="2026-07-15",
+        expiry_date="2027-07-15", onboarding_date="2026-07-01", manufacturer_name="Raichur Dryland Grain Co-op",
+        description="Gluten-free wholesome white jowar sorghum grains.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="29", category_id=3, name="Organic Traditional Basmati Rice", slug="basmati-rice", category_slug="grains",
+        price=220.00, unit="kg", original_price=250.00, coop_price=198.00, discount_pct=12,
+        image_url=find_product_icon("Brown Rice"), quantity=160, manufacture_date="2026-07-11",
+        expiry_date="2027-07-11", onboarding_date="2026-07-01", manufacturer_name="Tarai Foothill Organic Farmers",
+        description="Aromatic long-grain aged organic basmati rice.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="30", category_id=3, name="Organic Kerala Red Matta Rice", slug="matta-rice", category_slug="grains",
+        price=130.00, unit="kg", original_price=145.00, coop_price=117.00, discount_pct=10,
+        image_url=find_product_icon("Brown Rice"), quantity=150, manufacture_date="2026-07-13",
+        expiry_date="2027-07-13", onboarding_date="2026-07-01", manufacturer_name="Palakkad Paddy Farmers Collective",
+        description="Coarse nutrient-dense traditional red matta rice.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    # Category 4: 10 Pulses (units in kg, variants in kg only)
+    Product(
+        id="31", category_id=4, name="Organic Unpolished Toor Dal (Arhar)", slug="toor-dal", category_slug="pulses",
         price=180.00, unit="kg", original_price=200.00, coop_price=162.00, discount_pct=10,
         image_url=find_product_icon("Toor Dal"), quantity=150, manufacture_date="2026-07-12",
         expiry_date="2027-01-12", onboarding_date="2026-07-01", manufacturer_name="Kalaburagi Pulse Collective",
-        description="Sun-dried protein-dense native organic pulses.",
-        variants=["250g", "500g", "1kg"]
+        description="Sun-dried protein-dense native organic toor dal.",
+        variants=["1kg", "2kg", "5kg"]
     ),
     Product(
-        id="14", category_id=5, name="Organic Pure A2 Milk", slug="dairy", category_slug="dairy",
-        price=95.00, unit="L", original_price=110.00, coop_price=85.50, discount_pct=0,
-        image_url=find_product_icon("Milk"), quantity=40, manufacture_date="2026-07-28",
+        id="32", category_id=4, name="Organic Split Red Lentil (Masoor Dal)", slug="masoor-dal", category_slug="pulses",
+        price=140.00, unit="kg", original_price=155.00, coop_price=126.00, discount_pct=10,
+        image_url=find_product_icon("Masoor Dal"), quantity=160, manufacture_date="2026-07-14",
+        expiry_date="2027-01-14", onboarding_date="2026-07-01", manufacturer_name="Indore Lentil Growers Co-op",
+        description="Easy-to-cook protein-rich organic red split masoor dal.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="33", category_id=4, name="Organic Kabuli Chickpeas (Chana)", slug="chickpeas", category_slug="pulses",
+        price=160.00, unit="kg", original_price=180.00, coop_price=144.00, discount_pct=11,
+        image_url=find_product_icon("Chickpeas"), quantity=140, manufacture_date="2026-07-15",
+        expiry_date="2027-01-15", onboarding_date="2026-07-01", manufacturer_name="Malwa Plateau Organic Farms",
+        description="Large nutty organic kabuli chickpeas rich in fiber and protein.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="34", category_id=4, name="Organic Whole Black Gram (Urad Whole)", slug="black-gram", category_slug="pulses",
+        price=175.00, unit="kg", original_price=195.00, coop_price=157.50, discount_pct=10,
+        image_url=find_product_icon("Black Gram"), quantity=130, manufacture_date="2026-07-18",
+        expiry_date="2027-01-18", onboarding_date="2026-07-01", manufacturer_name="Andhra Organic Pulse Growers",
+        description="Traditional unpolished whole black urad dal.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="35", category_id=4, name="Organic Whole Green Moong Dal", slug="green-gram", category_slug="pulses",
+        price=155.00, unit="kg", original_price=170.00, coop_price=139.50, discount_pct=9,
+        image_url=find_product_icon("Green Gram"), quantity=170, manufacture_date="2026-07-16",
+        expiry_date="2027-01-16", onboarding_date="2026-07-01", manufacturer_name="Rajasthan Rainfed Farmers Co-Op",
+        description="Wholesome pesticide-free whole green moong dal.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="36", category_id=4, name="Organic Native Horse Gram (Kollu)", slug="horse-gram", category_slug="pulses",
+        price=120.00, unit="kg", original_price=135.00, coop_price=108.00, discount_pct=11,
+        image_url=find_product_icon("Horse Gram"), quantity=120, manufacture_date="2026-07-13",
+        expiry_date="2027-01-13", onboarding_date="2026-07-01", manufacturer_name="Kongu Region Native Seed Growers",
+        description="Iron and protein-rich traditional native horse gram.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="37", category_id=4, name="Organic Brown Cowpeas (Lobia)", slug="cowpeas", category_slug="pulses",
+        price=130.00, unit="kg", original_price=145.00, coop_price=117.00, discount_pct=10,
+        image_url=find_product_icon("Cowpeas"), quantity=110, manufacture_date="2026-07-17",
+        expiry_date="2027-01-17", onboarding_date="2026-07-01", manufacturer_name="Deccan Grain Guild",
+        description="Tender and nutty organic brown cowpeas.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="38", category_id=4, name="Organic Kashmiri Rajma (Kidney Beans)", slug="kidney-beans", category_slug="pulses",
+        price=195.00, unit="kg", original_price=220.00, coop_price=175.50, discount_pct=11,
+        image_url=find_product_icon("Kidney Beans"), quantity=100, manufacture_date="2026-07-19",
+        expiry_date="2027-01-19", onboarding_date="2026-07-01", manufacturer_name="Bhaderwah Valley Organics",
+        description="Authentic small dark red Kashmiri rajma kidney beans.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="39", category_id=4, name="Organic Dried White Peas (Safed Matar)", slug="white-peas", category_slug="pulses",
+        price=110.00, unit="kg", original_price=125.00, coop_price=99.00, discount_pct=12,
+        image_url=find_product_icon("White Peas"), quantity=125, manufacture_date="2026-07-21",
+        expiry_date="2027-01-21", onboarding_date="2026-07-01", manufacturer_name="Bundelkhand Farmers Co-op",
+        description="Clean sun-dried organic white peas rich in minerals.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="40", category_id=4, name="Organic Native Yellow Soybeans", slug="soybeans", category_slug="pulses",
+        price=135.00, unit="kg", original_price=150.00, coop_price=121.50, discount_pct=10,
+        image_url=find_product_icon("Soybeans"), quantity=135, manufacture_date="2026-07-20",
+        expiry_date="2027-01-20", onboarding_date="2026-07-01", manufacturer_name="Latur Organic Soybean Cluster",
+        description="Non-GMO protein-packed organic yellow soybeans.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    # Category 5: 10 Dairy Products (units in L, variants in L only)
+    Product(
+        id="41", category_id=5, name="Organic Pure A2 Desi Cow Milk", slug="a2-milk", category_slug="dairy",
+        price=95.00, unit="L", original_price=110.00, coop_price=85.50, discount_pct=14,
+        image_url=find_product_icon("Milk"), quantity=100, manufacture_date="2026-07-28",
         expiry_date="2026-07-31", onboarding_date="2026-07-01", manufacturer_name="Pandavapura Bilona Dairy",
         description="Pure unpasteurized fresh A2 Desi Cow milk.",
-        variants=["250mL", "500mL", "1L"]
+        variants=["1L", "2L", "5L"]
     ),
     Product(
-        id="15", category_id=6, name="Organic Aromatic Spices", slug="spices", category_slug="spices",
-        price=210.00, unit="g", original_price=230.00, coop_price=189.00, discount_pct=8,
+        id="42", category_id=5, name="Organic Farm Fresh Buffalo Milk", slug="buffalo-milk", category_slug="dairy",
+        price=85.00, unit="L", original_price=95.00, coop_price=76.50, discount_pct=10,
+        image_url=find_product_icon("Milk"), quantity=120, manufacture_date="2026-07-28",
+        expiry_date="2026-07-31", onboarding_date="2026-07-01", manufacturer_name="Davanagere Dairy Co-Op",
+        description="Rich and creamy fresh organic buffalo milk.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="43", category_id=5, name="Organic Badam Flavoured Milk", slug="badam-milk", category_slug="dairy",
+        price=140.00, unit="L", original_price=160.00, coop_price=126.00, discount_pct=12,
+        image_url=find_product_icon("Flavoured Milk"), quantity=80, manufacture_date="2026-07-26",
+        expiry_date="2026-08-05", onboarding_date="2026-07-01", manufacturer_name="Heritage Organic Dairies",
+        description="Nourishing A2 milk infused with real organic almonds.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="44", category_id=5, name="Organic Traditional Spiced Buttermilk (Chaas)", slug="buttermilk", category_slug="dairy",
+        price=60.00, unit="L", original_price=70.00, coop_price=54.00, discount_pct=14,
+        image_url=find_product_icon("Buttermilk"), quantity=150, manufacture_date="2026-07-27",
+        expiry_date="2026-08-02", onboarding_date="2026-07-01", manufacturer_name="Malnad Organic Dairy Guild",
+        description="Refreshing churned buttermilk spiced with cumin and curry leaves.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="45", category_id=5, name="Organic A2 Desi Cow Bilona Ghee", slug="ghee", category_slug="dairy",
+        price=1450.00, unit="L", original_price=1600.00, coop_price=1305.00, discount_pct=9,
+        image_url=find_product_icon("Ghee"), quantity=60, manufacture_date="2026-07-15",
+        expiry_date="2027-07-15", onboarding_date="2026-07-01", manufacturer_name="Gir Organic Cow Sanctuary",
+        description="Traditional Vedic bilona method cultured A2 ghee.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="46", category_id=5, name="Organic Fresh Creamy Set Curd (Dahi)", slug="curd", category_slug="dairy",
+        price=110.00, unit="L", original_price=125.00, coop_price=99.00, discount_pct=12,
+        image_url=find_product_icon("Curd"), quantity=90, manufacture_date="2026-07-27",
+        expiry_date="2026-08-03", onboarding_date="2026-07-01", manufacturer_name="Mandya Artisan Dairy",
+        description="Thick naturally set probiotic curd made from A2 cow milk.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="47", category_id=5, name="Organic Raw Almond Milk", slug="almond-milk", category_slug="dairy",
+        price=220.00, unit="L", original_price=250.00, coop_price=198.00, discount_pct=12,
+        image_url=find_product_icon("Almond Milk"), quantity=70, manufacture_date="2026-07-26",
+        expiry_date="2026-08-04", onboarding_date="2026-07-01", manufacturer_name="Plant-Based Organic Dairies",
+        description="Lactose-free creamy cold-pressed raw almond milk.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="48", category_id=5, name="Organic Fresh Farm Malai Cream", slug="cream", category_slug="dairy",
+        price=350.00, unit="L", original_price=390.00, coop_price=315.00, discount_pct=10,
+        image_url=find_product_icon("Cream"), quantity=50, manufacture_date="2026-07-27",
+        expiry_date="2026-08-02", onboarding_date="2026-07-01", manufacturer_name="Hassan Dairy Farmers Co-Op",
+        description="Pure unadulterated thick fresh farm malai cream.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="49", category_id=5, name="Organic Kesar Pista Flavoured Milk", slug="kesar-milk", category_slug="dairy",
+        price=160.00, unit="L", original_price=180.00, coop_price=144.00, discount_pct=11,
+        image_url=find_product_icon("Flavoured Milk"), quantity=75, manufacture_date="2026-07-26",
+        expiry_date="2026-08-05", onboarding_date="2026-07-01", manufacturer_name="Royal Organic Dairy Craft",
+        description="A2 milk blended with organic saffron strands and pistachios.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="50", category_id=5, name="Organic Sweet Mango Lassi", slug="mango-lassi", category_slug="dairy",
+        price=120.00, unit="L", original_price=135.00, coop_price=108.00, discount_pct=11,
+        image_url=find_product_icon("Buttermilk"), quantity=85, manufacture_date="2026-07-27",
+        expiry_date="2026-08-03", onboarding_date="2026-07-01", manufacturer_name="Ratnagiri Fruit Dairy Collective",
+        description="Rich churned yogurt drink blended with Alphonso mango pulp.",
+        variants=["1L", "2L", "5L"]
+    ),
+    # Category 6: 10 Spices (units in kg, variants in kg only)
+    Product(
+        id="51", category_id=6, name="Organic Salem Whole Turmeric & Powder", slug="turmeric", category_slug="spices",
+        price=210.00, unit="kg", original_price=230.00, coop_price=189.00, discount_pct=8,
         image_url=find_product_icon("Turmeric Powder"), quantity=80, manufacture_date="2026-07-05",
         expiry_date="2027-07-05", onboarding_date="2026-07-01", manufacturer_name="Sirsi Spice Hills Garden",
-        description="Aromatic whole organic spices harvested from Western Ghats.",
-        variants=["250g", "500g", "1kg"]
+        description="Aromatic high-curcumin Salem organic turmeric.",
+        variants=["1kg", "2kg", "5kg"]
     ),
     Product(
-        id="16", category_id=7, name="Organic Herbal Beverage", slug="beverages", category_slug="beverages",
-        price=135.00, unit="L", original_price=150.00, coop_price=121.50, discount_pct=0,
-        image_url=find_product_icon("Herbal Tea"), quantity=60, manufacture_date="2026-07-18",
+        id="52", category_id=6, name="Organic Guntur Red Chilli Powder", slug="chilli-powder", category_slug="spices",
+        price=280.00, unit="kg", original_price=310.00, coop_price=252.00, discount_pct=10,
+        image_url=find_product_icon("Chilli Powder"), quantity=100, manufacture_date="2026-07-08",
+        expiry_date="2027-07-08", onboarding_date="2026-07-01", manufacturer_name="Guntur Chilli Spice Co-Op",
+        description="Sun-dried fiery red Guntur chilli powder.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="53", category_id=6, name="Organic Native Coriander Seeds (Dhania)", slug="coriander", category_slug="spices",
+        price=160.00, unit="kg", original_price=180.00, coop_price=144.00, discount_pct=11,
+        image_url=find_product_icon("Coriander Powder"), quantity=120, manufacture_date="2026-07-10",
+        expiry_date="2027-07-10", onboarding_date="2026-07-01", manufacturer_name="Ramganj Mandi Spice Guild",
+        description="Fragrant whole native coriander seeds.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="54", category_id=6, name="Organic Whole Cumin Seeds (Jeera)", slug="cumin", category_slug="spices",
+        price=320.00, unit="kg", original_price=360.00, coop_price=288.00, discount_pct=11,
+        image_url=find_product_icon("Cumin Seeds"), quantity=90, manufacture_date="2026-07-12",
+        expiry_date="2027-07-12", onboarding_date="2026-07-01", manufacturer_name="Unjha Organic Cumin Collective",
+        description="Aromatic sun-cured whole cumin seeds.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="55", category_id=6, name="Organic Malabar Black Pepper", slug="black-pepper", category_slug="spices",
+        price=650.00, unit="kg", original_price=720.00, coop_price=585.00, discount_pct=10,
+        image_url=find_product_icon("Black Pepper"), quantity=70, manufacture_date="2026-07-14",
+        expiry_date="2027-07-14", onboarding_date="2026-07-01", manufacturer_name="Wayanad Spice Plantation",
+        description="Bold aromatic GI-tagged Malabar black peppercorns.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="56", category_id=6, name="Organic Green Cardamom (Elaichi)", slug="cardamom", category_slug="spices",
+        price=2200.00, unit="kg", original_price=2500.00, coop_price=1980.00, discount_pct=12,
+        image_url=find_product_icon("Cardamom"), quantity=40, manufacture_date="2026-07-15",
+        expiry_date="2027-07-15", onboarding_date="2026-07-01", manufacturer_name="Idukki Cardamom Hills Co-Op",
+        description="Plump fragrant 8mm green cardamom pods.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="57", category_id=6, name="Organic Ceylon Cinnamon Sticks", slug="cinnamon", category_slug="spices",
+        price=950.00, unit="kg", original_price=1050.00, coop_price=855.00, discount_pct=9,
+        image_url=find_product_icon("Cinnamon"), quantity=60, manufacture_date="2026-07-16",
+        expiry_date="2027-07-16", onboarding_date="2026-07-01", manufacturer_name="Southern Spice Estate",
+        description="Sweet delicate true Ceylon cinnamon quills.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="58", category_id=6, name="Organic Malnad Whole Cloves (Laung)", slug="cloves", category_slug="spices",
+        price=1100.00, unit="kg", original_price=1250.00, coop_price=990.00, discount_pct=12,
+        image_url=find_product_icon("Cloves"), quantity=50, manufacture_date="2026-07-17",
+        expiry_date="2027-07-17", onboarding_date="2026-07-01", manufacturer_name="Shimoga Organic Spice Belt",
+        description="Aroma-rich whole handpicked cloves.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="59", category_id=6, name="Organic Sweet Fennel Seeds (Saunf)", slug="fennel", category_slug="spices",
+        price=190.00, unit="kg", original_price=210.00, coop_price=171.00, discount_pct=9,
+        image_url=find_product_icon("Fennel Seeds"), quantity=110, manufacture_date="2026-07-18",
+        expiry_date="2027-07-18", onboarding_date="2026-07-01", manufacturer_name="Saurashtra Spice Farmers",
+        description="Sweet aromatic digestive green fennel seeds.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    Product(
+        id="60", category_id=6, name="Organic Whole Fenugreek Seeds (Methi)", slug="fenugreek", category_slug="spices",
+        price=140.00, unit="kg", original_price=155.00, coop_price=126.00, discount_pct=10,
+        image_url=find_product_icon("Fenugreek"), quantity=130, manufacture_date="2026-07-19",
+        expiry_date="2027-07-19", onboarding_date="2026-07-01", manufacturer_name="Nagaur Spice Collective",
+        description="Golden bitter-sweet organic fenugreek seeds.",
+        variants=["1kg", "2kg", "5kg"]
+    ),
+    # Category 7: 10 Beverages (units in L, variants in L only)
+    Product(
+        id="61", category_id=7, name="Organic Fresh Mixed Fruit Juice", slug="fruit-juice", category_slug="beverages",
+        price=135.00, unit="L", original_price=150.00, coop_price=121.50, discount_pct=10,
+        image_url=find_product_icon("Fruit Juice"), quantity=60, manufacture_date="2026-07-18",
         expiry_date="2026-10-18", onboarding_date="2026-07-01", manufacturer_name="Chikmagalur Herbal Valley",
-        description="Revitalizing natural organic herbal drink bottled fresh.",
-        variants=["250mL", "500mL", "1L"]
+        description="Revitalizing natural organic herbal fruit drink bottled fresh.",
+        variants=["1L", "2L", "5L"]
     ),
     Product(
-        id="17", category_id=8, name="Organic Premium Almonds", slug="dry-fruits", category_slug="dry-fruits",
-        price=450.00, unit="g", original_price=500.00, coop_price=405.00, discount_pct=10,
-        image_url=find_product_icon("Almonds"), quantity=90, manufacture_date="2026-07-08",
-        expiry_date="2027-07-08", onboarding_date="2026-07-01", manufacturer_name="Kolar Organic Nut Growers",
-        description="Premium crunch raw organic almonds rich in healthy fats.",
-        variants=["250g", "500g", "1kg"]
+        id="62", category_id=7, name="Organic Tender Coconut Water", slug="coconut-water", category_slug="beverages",
+        price=90.00, unit="L", original_price=100.00, coop_price=81.00, discount_pct=10,
+        image_url=find_product_icon("Coconut Water"), quantity=120, manufacture_date="2026-07-28",
+        expiry_date="2026-08-05", onboarding_date="2026-07-01", manufacturer_name="Pollachi Coconut Farmers Co-Op",
+        description="Pure hydrating electrolyte-rich organic tender coconut water.",
+        variants=["1L", "2L", "5L"]
     ),
+    Product(
+        id="63", category_id=7, name="Organic Raw Sugarcane Juice", slug="sugarcane-juice", category_slug="beverages",
+        price=80.00, unit="L", original_price=90.00, coop_price=72.00, discount_pct=11,
+        image_url=find_product_icon("Fruit Juice"), quantity=100, manufacture_date="2026-07-28",
+        expiry_date="2026-08-02", onboarding_date="2026-07-01", manufacturer_name="Mandya Sugarcane Organic Belt",
+        description="Cold-pressed raw organic sugarcane juice with ginger and lime.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="64", category_id=7, name="Organic Cold-Pressed Wild Amla Juice", slug="amla-juice", category_slug="beverages",
+        price=160.00, unit="L", original_price=180.00, coop_price=144.00, discount_pct=11,
+        image_url=find_product_icon("Fruit Juice"), quantity=80, manufacture_date="2026-07-20",
+        expiry_date="2026-11-20", onboarding_date="2026-07-01", manufacturer_name="Pratapgarh Wild Amla Collective",
+        description="Vitamin C packed pure cold-pressed wild amla juice.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="65", category_id=7, name="Organic Konkan Kokum Sherbet Concentrate", slug="kokum-sherbet", category_slug="beverages",
+        price=175.00, unit="L", original_price=195.00, coop_price=157.50, discount_pct=10,
+        image_url=find_product_icon("Fruit Juice"), quantity=70, manufacture_date="2026-07-15",
+        expiry_date="2027-01-15", onboarding_date="2026-07-01", manufacturer_name="Ratnagiri Organic Produce Guild",
+        description="Tangy digestive organic kokum fruit extract.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="66", category_id=7, name="Organic Fresh Mint Lemonade", slug="lemonade", category_slug="beverages",
+        price=85.00, unit="L", original_price=95.00, coop_price=76.50, discount_pct=10,
+        image_url=find_product_icon("Lemonade"), quantity=90, manufacture_date="2026-07-27",
+        expiry_date="2026-08-05", onboarding_date="2026-07-01", manufacturer_name="Nilgiri Mint & Citrus Orchards",
+        description="Zesty refreshing lemonade infused with farm-fresh mint.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="67", category_id=7, name="Organic Traditional Nannari Roots Sherbet", slug="nannari-sherbet", category_slug="beverages",
+        price=150.00, unit="L", original_price=170.00, coop_price=135.00, discount_pct=12,
+        image_url=find_product_icon("Fruit Juice"), quantity=75, manufacture_date="2026-07-10",
+        expiry_date="2027-01-10", onboarding_date="2026-07-01", manufacturer_name="Western Ghats Herbal Collective",
+        description="Cooling traditional Indian sarsaparilla root extract drink.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="68", category_id=7, name="Organic Pure Aloe Vera Drink", slug="aloe-vera-drink", category_slug="beverages",
+        price=140.00, unit="L", original_price=160.00, coop_price=126.00, discount_pct=12,
+        image_url=find_product_icon("Fruit Juice"), quantity=85, manufacture_date="2026-07-22",
+        expiry_date="2026-11-22", onboarding_date="2026-07-01", manufacturer_name="Thar Desert Organic Aloe Farms",
+        description="Hydrating aloe vera pulp juice with natural fiber.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="69", category_id=7, name="Organic Alphonso Mango Nectar Juice", slug="mango-nectar", category_slug="beverages",
+        price=190.00, unit="L", original_price=215.00, coop_price=171.00, discount_pct=11,
+        image_url=find_product_icon("Fruit Juice"), quantity=80, manufacture_date="2026-07-25",
+        expiry_date="2026-10-25", onboarding_date="2026-07-01", manufacturer_name="Devgad Heritage Mango Groves",
+        description="Thick luscious GI Alphonso mango pulp juice.",
+        variants=["1L", "2L", "5L"]
+    ),
+    Product(
+        id="70", category_id=7, name="Organic Fresh Red Pomegranate Juice", slug="pomegranate-juice", category_slug="beverages",
+        price=210.00, unit="L", original_price=240.00, coop_price=189.00, discount_pct=12,
+        image_url=find_product_icon("Fruit Juice"), quantity=65, manufacture_date="2026-07-26",
+        expiry_date="2026-08-10", onboarding_date="2026-07-01", manufacturer_name="Solapur Pomegranate Juices",
+        description="Pure 100% pressed red pomegranate juice no added sugar.",
+        variants=["1L", "2L", "5L"]
+    ),
+    # Other Categories
     Product(
         id="18", category_id=9, name="Organic Ancient Foxtail Millet", slug="millets", category_slug="millets",
         price=160.00, unit="kg", original_price=180.00, coop_price=144.00, discount_pct=0,
@@ -417,8 +802,8 @@ def get_products_by_category_id(category_id: int) -> List[Product]:
         price = float(r["price"]) if r["price"] else 0.0
         disc = int(r["discount"]) if r["discount"] else None
         
-        # Unit extraction & fallback
-        unit = r.get("unit") or get_default_unit_for_category(cat_id, p_name)
+        # Unit extraction & category enforcement
+        unit = get_default_unit_for_category(cat_id, p_name) if cat_id in (1, 2, 3, 4, 5, 6, 7) else (r.get("unit") or get_default_unit_for_category(cat_id, p_name))
 
         orig_price = round(price / (1 - (disc / 100.0)), 2) if (disc and disc > 0 and disc < 100) else round(price * 1.15, 2) if disc else None
         img_file = find_product_icon(p_name)
@@ -441,13 +826,13 @@ def get_products_by_category_id(category_id: int) -> List[Product]:
             quantity=r.get("quantity") or 50,
             manufacture_date=str(r.get("manufacture_date") or "2026-07-20"),
             expiry_date=str(r.get("expiry_date") or "2027-07-20"),
-            onboarding_date=str(r.get("onboarding_date") or "2026-07-01"),
-            manufacturer_name=r.get("manufacturer_name") or "Organic Produce Co-Op",
-            farmer_name=r.get("manufacturer_name") or "Ramakrishnappa",
+            onboarding_date="2026-07-01",
+            manufacturer_name="Organic Produce Co-Op",
+            farmer_name="Ramakrishnappa",
             farm_location="Organic Belt, Mandya",
             harvest_date=str(r.get("manufacture_date") or "2026-07-20"),
             batch_no=f"OF-BATCH-10{cat_id}",
-            description=f"Fresh 100% organic {p_name} supplied by {r.get('manufacturer_name', 'Organic Farms')}."
+            description=f"Fresh 100% organic {p_name}."
         ))
     return products
 
@@ -531,7 +916,7 @@ def get_bestseller_products() -> List[Product]:
                     price=final_price,
                     original_price=mrp,
                     discount_pct=int(disc),
-                    image_url=f"product_icons/prod_{p_id}.png"
+                    image_url=find_product_icon(p_name)
                 ))
         return prods
 
@@ -570,7 +955,7 @@ def get_deals_products() -> List[Product]:
                     price=final_price,
                     original_price=mrp,
                     discount_pct=int(disc),
-                    image_url=f"product_icons/prod_{p_id}.png"
+                    image_url=find_product_icon(p_name)
                 ))
         return prods
 
@@ -609,7 +994,7 @@ def get_new_arrivals_products() -> List[Product]:
                     price=final_price,
                     original_price=mrp,
                     discount_pct=int(disc),
-                    image_url=f"product_icons/prod_{p_id}.png"
+                    image_url=find_product_icon(p_name)
                 ))
         return prods
 
