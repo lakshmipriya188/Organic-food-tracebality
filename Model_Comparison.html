@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Multi-Class Classification Model Comparison Report</title>
+<style>
+    :root {
+        --bg: #0f1115;
+        --card: #171a21;
+        --border: #2a2e37;
+        --text: #e6e8eb;
+        --muted: #9aa1ab;
+        --accent: #4f8cff;
+        --good: #2ecc71;
+        --bad: #e74c3c;
+        --gold: #f5c518;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 40px 20px;
+        line-height: 1.6;
+    }
+    .container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    h1 {
+        font-size: 26px;
+        margin-bottom: 4px;
+    }
+    .subtitle {
+        color: var(--muted);
+        margin-bottom: 32px;
+        font-size: 14px;
+    }
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 32px;
+    }
+    .meta-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+    .meta-card .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .meta-card .value {
+        font-size: 20px;
+        font-weight: 600;
+        margin-top: 4px;
+    }
+    h2 {
+        font-size: 18px;
+        margin: 36px 0 14px;
+        border-left: 3px solid var(--accent);
+        padding-left: 10px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    th, td {
+        padding: 12px 14px;
+        text-align: center;
+        font-size: 13.5px;
+        border-bottom: 1px solid var(--border);
+    }
+    th {
+        background: #1d212b;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 11.5px;
+        letter-spacing: 0.03em;
+    }
+    td:first-child, th:first-child {
+        text-align: left;
+        font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    .winner-row {
+        background: rgba(46, 204, 113, 0.08);
+    }
+    .winner-row td:first-child::after {
+        content: " 🏆";
+    }
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .badge-good { background: rgba(46,204,113,0.15); color: var(--good); }
+    .badge-bad { background: rgba(231,76,60,0.15); color: var(--bad); }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+    .model-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 20px;
+    }
+    .model-card h3 {
+        margin: 0 0 10px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .rank {
+        font-size: 12px;
+        color: var(--bg);
+        background: var(--gold);
+        border-radius: 999px;
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+    }
+    .model-card ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13.5px;
+    }
+    .model-card li { margin-bottom: 6px; }
+    .model-card li strong { color: var(--text); }
+
+    .recommend-box {
+        background: linear-gradient(135deg, rgba(79,140,255,0.12), rgba(79,140,255,0.03));
+        border: 1px solid rgba(79,140,255,0.35);
+        border-radius: 12px;
+        padding: 20px 22px;
+        margin-top: 16px;
+    }
+    .recommend-box h3 {
+        margin-top: 0;
+        color: var(--accent);
+        font-size: 16px;
+    }
+    .recommend-box p { margin: 8px 0; font-size: 14px; }
+    .footer-note {
+        margin-top: 40px;
+        font-size: 12px;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+    }
+    code {
+        background: #1d212b;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12.5px;
+        color: var(--gold);
+    }
+</style>
+</head>
+<body>
+<div class="container">
+
+    <h1>Multi-Class Classification Model Comparison</h1>
+    <div class="subtitle">Product ID prediction · 100 classes · Stratified sample of 150,000 rows</div>
+
+    <div class="meta-grid">
+        <div class="meta-card">
+            <div class="label">Dataset Size</div>
+            <div class="value">1,410,027 rows</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Training Sample</div>
+            <div class="value">120,000 rows</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Test Sample</div>
+            <div class="value">30,000 rows</div>
+        </div>
+        <div class="meta-card">
+            <div class="label">Target Classes</div>
+            <div class="value">100</div>
+        </div>
+    </div>
+
+    <h2>Performance Comparison</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Top-1 Acc</th>
+                <th>Top-3 Acc</th>
+                <th>Top-5 Acc</th>
+                <th>Weighted F1</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>Log Loss</th>
+                <th>Train Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="winner-row">
+                <td>LightGBM</td>
+                <td><strong>0.9720</strong></td>
+                <td>0.9991</td>
+                <td>0.9993</td>
+                <td><strong>0.9720</strong></td>
+                <td>0.9722</td>
+                <td>0.9720</td>
+                <td>0.1119</td>
+                <td>61.81</td>
+            </tr>
+            <tr>
+                <td>XGBoost</td>
+                <td>0.9707</td>
+                <td>0.9990</td>
+                <td>0.9993</td>
+                <td>0.9707</td>
+                <td>0.9709</td>
+                <td>0.9707</td>
+                <td><strong>0.0708</strong></td>
+                <td>55.46</td>
+            </tr>
+            <tr>
+                <td>RandomForest</td>
+                <td>0.9650</td>
+                <td>0.9791</td>
+                <td>0.9833</td>
+                <td>0.9652</td>
+                <td>0.9661</td>
+                <td>0.9650</td>
+                <td><span class="badge badge-bad">1.1058</span></td>
+                <td><strong>8.26</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Model-by-Model Breakdown</h2>
+    <div class="card-grid">
+        <div class="model-card">
+            <h3><span class="rank">1</span> LightGBM <span class="badge badge-good">Best Overall</span></h3>
+            <ul>
+                <li>Highest <strong>Top-1</strong>, <strong>Top-3</strong>, and <strong>Top-5</strong> accuracy</li>
+                <li>Best <strong>F1 / Precision / Recall</strong> — most balanced across all 100 classes</li>
+                <li>Slightly slower to train (61.8s) than XGBoost</li>
+                <li>Log loss is good, though not the best</li>
+            </ul>
+        </div>
+        <div class="model-card">
+            <h3><span class="rank">2</span> XGBoost <span class="badge badge-good">Best Calibration</span></h3>
+            <ul>
+                <li>Accuracy within <strong>0.13%</strong> of LightGBM</li>
+                <li><strong>Lowest log loss (0.0708)</strong> — most confident &amp; well-calibrated probabilities</li>
+                <li>Fastest of the two top models to train (55.5s)</li>
+                <li>Best choice if downstream logic depends on probability scores</li>
+            </ul>
+        </div>
+        <div class="model-card">
+            <h3><span class="rank">3</span> RandomForest <span class="badge badge-bad">Not Recommended</span></h3>
+            <ul>
+                <li>Lowest accuracy of the three (96.5%)</li>
+                <li><strong>Poor log loss (1.1058)</strong> — probability outputs are unreliable</li>
+                <li>Fastest by far to train (8.3s) — useful only for quick iteration</li>
+                <li>Avoid for production if confidence scores matter</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>Recommendation</h2>
+    <div class="recommend-box">
+        <h3>Use LightGBM as the primary model</h3>
+        <p>It delivers the highest accuracy across Top-1, Top-3, and Top-5, plus the best F1 / Precision / Recall balance across all 100 product classes.</p>
+        <p><strong>Consider XGBoost instead</strong> if the application needs well-calibrated probability outputs — e.g. showing a confidence percentage to business users or applying probability thresholds — since its log loss (<code>0.0708</code>) is significantly better than LightGBM's (<code>0.1119</code>).</p>
+        <p><strong>Avoid RandomForest</strong> for this task — despite a reasonable Top-1 accuracy, its poorly calibrated probabilities (log loss of <code>1.1058</code>) make it unsuitable wherever confidence scores are used downstream.</p>
+    </div>
+
+    <div class="footer-note">
+        Generated from pipeline output — LightGBM, XGBoost &amp; RandomForest multi-class classifiers trained on a stratified 150,000-row sample, evaluated on a held-out 20% test split (30,000 rows) across 100 product classes.
+    </div>
+
+</div>
+</body>
+</html>

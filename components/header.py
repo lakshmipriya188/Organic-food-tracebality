@@ -10,7 +10,7 @@ def render_header():
     _init_state()
 
     # MAIN HEADER ROW (Brand Logo & Title on Left, Actions on Right)
-    col_brand, col_actions = st.columns([5.0, 5.0])
+    col_brand, col_actions = st.columns([4.2, 5.8])
 
     # 1. Brand Logo & Subtitle
     with col_brand:
@@ -44,7 +44,7 @@ def render_header():
             unsafe_allow_html=True
         )
 
-    # 2. Header Actions: Wishlist, Cart, Account
+    # 2. Header Actions: AI Predict, Wishlist, Cart, Account
     with col_actions:
         w_count = len(wishlist_items())
         c_count = cart_count()
@@ -54,16 +54,20 @@ def render_header():
         user_name = st.session_state.user.split(" ")[0] if st.session_state.user else "Log in"
         u_label = f"👤 {user_name}"
 
-        act_col1, act_col2, act_col3 = st.columns(3)
+        act_col1, act_col2, act_col3, act_col4 = st.columns(4)
         with act_col1:
+            if st.button("🤖 AI Predict", key="hdr_ai_btn", use_container_width=True):
+                go_to("ml_prediction")
+                st.rerun()
+        with act_col2:
             if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
                 go_to("wishlist")
                 st.rerun()
-        with act_col2:
+        with act_col3:
             if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
                 go_to("cart")
                 st.rerun()
-        with act_col3:
+        with act_col4:
             if st.button(u_label, key="hdr_user_btn", use_container_width=True):
                 go_to("account")
                 st.rerun()

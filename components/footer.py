@@ -45,6 +45,9 @@ def render_footer():
 
     with f_col3:
         st.markdown("<div style='font-family:\"Poppins\", sans-serif; font-weight:700; color:#1B4D3E; margin-bottom:0.9rem; font-size:1rem;'>Quick Access</div>", unsafe_allow_html=True)
+        if st.button("🤖 AI Predictor", key="ftr_ai_pred"):
+            go_to("ml_prediction")
+            st.rerun()
         if st.button("Store Locations 📍", key="ftr_stores"):
             go_to("store_locations")
             st.rerun()
