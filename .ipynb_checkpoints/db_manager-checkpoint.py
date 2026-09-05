@@ -140,6 +140,7 @@ def init_mysql_db():
                 product_discount DECIMAL(5,2) NOT NULL,
                 price_after_discount DECIMAL(10,2) NOT NULL,
                 order_date DATE NOT NULL,
+                order_time TIME NOT NULL,
                 CONSTRAINT fk_order_customer FOREIGN KEY (customer_id) REFERENCES Customer_Details(customer_id) ON DELETE CASCADE,
                 CONSTRAINT fk_order_product FOREIGN KEY (product_id) REFERENCES Product(product_id) ON DELETE CASCADE
             );
@@ -676,6 +677,7 @@ def fetch_order_history_db(customer_id: int) -> List[Dict[str, Any]]:
                 o.product_discount,
                 o.price_after_discount,
                 o.order_date,
+                o.order_time,
                 p.product_name,
                 p.unit,
                 cat.category_name

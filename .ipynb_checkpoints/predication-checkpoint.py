@@ -3,12 +3,16 @@ Streamlit Interactive Product Recommendation Engine
 File: predication.py
 
 Features:
-- Primary Input: Customer ID (Queries database for Customer Name & Order_Details transaction history)
-- Displays Customer Name prominently (e.g. Rahul Sharma)
-- Dynamic 20 SHAP Feature calculation from Order_Details database schema
-- Irrespective of whether Customer ID or manual 20 features are provided, generates predictions
-- Robust pickle asset loading using multi-path resolution
-- Accepts / Rejects product recommendations and manages Cart & Wishlist session history
+- Inputs: 20 SHAP Selected Features
+- Model Selection: LightGBM, XGBoost, Random Forest
+- Recommends 1 product at a time (starting from Top 1)
+- Detailed Session Activity Log & Shopping Summary above:
+    * Cart Item Details: Original Price, Discount %, Price after Discount.
+    * Cart Totals: Total Price without discount, Discount Savings, Final Payable Amount.
+    * Wishlist Favorites with impressive prompt ("Still considering my suggestions?") and "Add to Cart 🛒" buttons.
+    * Rejected items section with re-consideration prompt and "Move to Cart / Move to Wishlist" buttons.
+- Rejection Apology & Next Product Recommendation.
+- Acceptance Actions: 🛒 Add to Cart, ❤️ Add to Wishlist.
 """
 
 import os
@@ -16,10 +20,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import streamlit as st
-import mysql.connector
-from mysql.connector import Error
 
-# 20 SHAP-selected optimal features in exact model input order
+# 20 SHAP-selected optimal features
 selected_features = [
     'min_pp', 'p90_pp', 'p95_pad', 'p25_pp', 'p95_pp', 'max_pp',
     'min_pad', 'p75_pp', 'max_pad', 'p90_pad', 'avg_pp', 'p50_pp',
@@ -29,149 +31,10 @@ selected_features = [
 
 target_col = 'product_id'
 
-# Database Configuration Parameters
-MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
-MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
-MYSQL_USER = os.environ.get("MYSQL_USER", "root")
-MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "root123")
-MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "farmora")
-
-
-def get_direct_db_connection():
-    """Establish direct connection to MySQL database."""
-    try:
-        conn = mysql.connector.connect(
-            host=MYSQL_HOST,
-            port=MYSQL_PORT,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            database=MYSQL_DATABASE,
-            autocommit=True
-        )
-        return conn
-    except Error:
-        try:
-            conn = mysql.connector.connect(
-                host=MYSQL_HOST,
-                port=MYSQL_PORT,
-                user=MYSQL_USER,
-                password=MYSQL_PASSWORD,
-                database="organic_food_traceability",
-                autocommit=True
-            )
-            return conn
-        except Error:
-            return None
-
-
-def fetch_customer_info_and_features(customer_id: int):
-    """
-    Directly queries database for Customer_Details & Order_Details by customer_id.
-    Returns (cust_info_dict, features_df, error_msg).
-    If customer is not found, returns (None, None, "Customer is not in the current database").
-    """
-    FALLBACK_CUSTOMERS = [
-        {"customer_id": 1, "customer_name": "Rahul Sharma", "email_id": "rahul@gmail.com"},
-        {"customer_id": 2, "customer_name": "Priya Singh", "email_id": "priya@gmail.com"},
-        {"customer_id": 3, "customer_name": "Amit Kumar", "email_id": "amit@gmail.com"},
-        {"customer_id": 4, "customer_name": "Sneha Reddy", "email_id": "sneha@gmail.com"},
-        {"customer_id": 5, "customer_name": "Arjun Patel", "email_id": "arjun@gmail.com"},
-    ]
-
-    conn = get_direct_db_connection()
-    cust_info = None
-    orders = []
-
-    if conn:
-        try:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(
-                "SELECT customer_id, customer_name, email_id FROM Customer_Details WHERE customer_id = %s;",
-                (int(customer_id),)
-            )
-            cust_info = cursor.fetchone()
-
-            if cust_info:
-                cursor.execute(
-                    """SELECT product_price, product_discount, price_after_discount 
-                       FROM Order_Details WHERE customer_id = %s;""",
-                    (int(customer_id),)
-                )
-                orders = cursor.fetchall()
-            cursor.close()
-            conn.close()
-        except Exception as e:
-            print(f"DB query notice: {e}")
-
-    # Check fallback in-memory records if DB is offline
-    if not cust_info:
-        for fc in FALLBACK_CUSTOMERS:
-            if fc["customer_id"] == int(customer_id):
-                cust_info = fc
-                orders = [
-                    {"product_price": 180.0, "product_discount": 10.0, "price_after_discount": 162.0},
-                    {"product_price": 350.0, "product_discount": 12.0, "price_after_discount": 308.0},
-                    {"product_price": 95.0, "product_discount": 14.0, "price_after_discount": 81.70},
-                    {"product_price": 1450.0, "product_discount": 9.0, "price_after_discount": 1319.50},
-                ]
-                break
-
-    if not cust_info:
-        return None, None, "Customer is not in the current database"
-
-    if not orders:
-        return cust_info, None, "Customer is not in the current database"
-
-    df_orders = pd.DataFrame(orders)
-    pp = df_orders['product_price'].astype(float).values
-    pd_disc = df_orders['product_discount'].astype(float).values
-    pad = df_orders['price_after_discount'].astype(float).values
-
-    feature_dict = {
-        'min_pp': float(np.min(pp)),
-        'p90_pp': float(np.percentile(pp, 90)),
-        'p95_pad': float(np.percentile(pad, 95)),
-        'p25_pp': float(np.percentile(pp, 25)),
-        'p95_pp': float(np.percentile(pp, 95)),
-        'max_pp': float(np.max(pp)),
-        'min_pad': float(np.min(pad)),
-        'p75_pp': float(np.percentile(pp, 75)),
-        'max_pad': float(np.max(pad)),
-        'p90_pad': float(np.percentile(pad, 90)),
-        'avg_pp': float(np.mean(pp)),
-        'p50_pp': float(np.percentile(pp, 50)),
-        'p25_pad': float(np.percentile(pad, 25)),
-        'p50_pad': float(np.percentile(pad, 50)),
-        'avg_pad': float(np.mean(pad)),
-        'p75_pad': float(np.percentile(pad, 75)),
-        'p90_pd': float(np.percentile(pd_disc, 90)),
-        'total_pad': float(np.sum(pad)),
-        'max_pd': float(np.max(pd_disc)),
-        'p95_pd': float(np.percentile(pd_disc, 95))
-    }
-
-    features_df = pd.DataFrame([feature_dict])[selected_features]
-    return cust_info, features_df, None
-
 
 @st.cache_resource
 def load_assets():
-    """Load trained models, label encoder, and products metadata using robust multi-path resolution."""
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    cwd = os.getcwd()
-
-    def resolve_path(fname):
-        candidates = [
-            os.path.join(base_dir, fname),
-            os.path.join(cwd, fname),
-            fname,
-            os.path.abspath(fname)
-        ]
-        for c in candidates:
-            if os.path.exists(c):
-                return c
-        return None
-
+    """Load trained models, label encoder, and products metadata."""
     models = {}
     model_files = {
         'LightGBM': ['lgbm_multiclass_model.pkl', 'lgbm_model.pkl'],
@@ -181,29 +44,26 @@ def load_assets():
 
     for name, f_list in model_files.items():
         for fname in f_list:
-            resolved_p = resolve_path(fname)
-            if resolved_p:
+            if os.path.exists(fname):
                 try:
-                    with open(resolved_p, 'rb') as f:
+                    with open(fname, 'rb') as f:
                         models[name] = pickle.load(f)
                     break
                 except Exception as e:
-                    print(f"Could not load {resolved_p}: {e}")
+                    print(f"Could not load {fname}: {e}")
 
     encoder = None
-    enc_path = resolve_path('label_encoder.pkl')
-    if enc_path:
+    if os.path.exists('label_encoder.pkl'):
         try:
-            with open(enc_path, 'rb') as f:
+            with open('label_encoder.pkl', 'rb') as f:
                 encoder = pickle.load(f)
         except Exception as e:
-            print(f"Error loading label_encoder.pkl from {enc_path}: {e}")
+            print(f"Error loading label_encoder.pkl: {e}")
 
     products_df = None
-    prod_csv_path = resolve_path('products.csv')
-    if prod_csv_path:
+    if os.path.exists('products.csv'):
         try:
-            products_df = pd.read_csv(prod_csv_path)
+            products_df = pd.read_csv('products.csv')
         except Exception:
             pass
 
@@ -218,7 +78,7 @@ def get_product_info(product_id, products_df):
             row = match.iloc[0]
             name = row.get('product_name', f'Product #{product_id}')
             price = float(row.get('price', 0.0))
-            discount = float(row.get('discount', 10.0))
+            discount = float(row.get('discount', 10.0))  # Default 10% if missing
             price_after_disc = round(price * (1.0 - (discount / 100.0)), 2)
             category = row.get('category_name', row.get('category_id', 'N/A'))
             return name, price, discount, price_after_disc, category
@@ -257,12 +117,16 @@ def main():
         initial_sidebar_state="collapsed"
     )
 
-    # Hide automatic sidebar navigation
+    # CSS to hide Streamlit automatic sidebar navigation
     st.markdown(
         """
         <style>
-        [data-testid="stSidebarNav"] { display: none !important; }
-        section[data-testid="stSidebar"] { display: none !important; }
+        [data-testid="stSidebarNav"] {
+            display: none !important;
+        }
+        section[data-testid="stSidebar"] {
+            display: none !important;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -270,32 +134,38 @@ def main():
 
     # Page Header
     st.title("📦 Organic Product Recommendation Engine")
-    st.markdown("Enter a **Customer ID** or adjust features to fetch customer details and generate personalized product recommendations.")
+    st.markdown("Enter the 20 SHAP Feature values below and select a machine learning model to get tailored product recommendations.")
     st.markdown("---")
 
     models, encoder, products_df = load_assets()
 
     if not models:
-        st.error("⚠️ No trained model files could be loaded (`lgbm_multiclass_model.pkl`, `xgb_multiclass_model.pkl`, `rf_multiclass_model.pkl`). Please check pickle files.")
+        st.error("⚠️ No trained model files found (`lgbm_multiclass_model.pkl`, `xgb_multiclass_model.pkl`, `rf_multiclass_model.pkl`).")
         return
 
     if encoder is None:
-        st.error("⚠️ `label_encoder.pkl` file not found or could not be loaded.")
+        st.error("⚠️ `label_encoder.pkl` file not found.")
         return
 
-    # Session State Initialization
+    # Initialize Session States
     if "rejected_product_ids" not in st.session_state:
         st.session_state.rejected_product_ids = set()
+
     if "accepted_product_ids" not in st.session_state:
         st.session_state.accepted_product_ids = set()
+
     if "accepted_history" not in st.session_state:
         st.session_state.accepted_history = []
+
     if "rejected_history" not in st.session_state:
         st.session_state.rejected_history = []
+
     if "user_accepted_current" not in st.session_state:
         st.session_state.user_accepted_current = False
+
     if "last_action_msg" not in st.session_state:
         st.session_state.last_action_msg = ""
+
     if "last_rejection_msg" not in st.session_state:
         st.session_state.last_rejection_msg = ""
 
@@ -306,92 +176,38 @@ def main():
         index=0
     )
 
-    # Input Mode Tabs: Customer ID vs Manual Features
-    tab_cust_id, tab_manual = st.tabs(["👤 Predict by Customer ID", "⚙️ Predict by Manual 20 Features"])
+    st.markdown("### Feature Inputs")
 
-    input_df = None
-    current_customer_info = None
-
-    with tab_cust_id:
-        st.markdown("### Enter Customer ID for Database Lookup")
-        cust_id_in = st.number_input("Customer ID:", min_value=1, value=1, step=1, key="cust_id_input_num")
-
-        if st.button("🔍 Fetch Customer & Predict", key="btn_fetch_cust", use_container_width=True):
-            cust_info, feat_df, err = fetch_customer_info_and_features(cust_id_in)
-            if err or feat_df is None:
-                st.error("Customer is not in the current database")
-                st.session_state.current_feat_df = None
-                st.session_state.current_cust_info = None
-            else:
-                st.session_state.current_feat_df = feat_df
-                st.session_state.current_cust_info = cust_info
-                st.session_state.has_run_prediction = True
-                st.session_state.rejected_product_ids = set()
-                st.session_state.accepted_product_ids = set()
-                st.session_state.accepted_history = []
-                st.session_state.rejected_history = []
-                st.session_state.user_accepted_current = False
-                st.session_state.last_action_msg = ""
-                st.session_state.last_rejection_msg = ""
-
-        # Display Customer Info Card if fetched
-        if st.session_state.get("current_cust_info"):
-            c_info = st.session_state.current_cust_info
-            st.markdown(
-                f"""
-                <div style="
-                    background: linear-gradient(135deg, #1B4D3E 0%, #0F291E 100%);
-                    border-radius: 16px;
-                    padding: 1.4rem;
-                    color: #FFFFFF;
-                    margin-top: 1rem;
-                    box-shadow: 0 8px 20px rgba(27, 77, 62, 0.15);
-                ">
-                    <div style="font-size: 0.8rem; font-weight: 700; color: #4ADE80; letter-spacing: 1.5px; text-transform: uppercase;">
-                        VERIFIED CUSTOMER PROFILE
-                    </div>
-                    <div style="font-size: 1.8rem; font-weight: 800; font-family: 'Poppins', sans-serif; color: #FFFFFF; margin: 4px 0;">
-                        👤 Customer Name: {c_info.get('customer_name', 'N/A')}
-                    </div>
-                    <div style="font-size: 0.95rem; color: #DCFCE7;">
-                        📧 Email ID: <b>{c_info.get('email_id', 'N/A')}</b> | 🆔 Customer ID: <b>#{c_info.get('customer_id')}</b>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
+    # 20 Feature Inputs arranged in 4 Columns
+    input_values = {}
+    cols = st.columns(4)
+    for idx, feature in enumerate(selected_features):
+        col = cols[idx % 4]
+        with col:
+            input_values[feature] = st.number_input(
+                f"{feature}:",
+                value=10.0,
+                key=f"input_{feature}"
             )
 
-    with tab_manual:
-        st.markdown("### Manual 20 SHAP Feature Inputs")
-        manual_inputs = {}
-        cols = st.columns(4)
-        for idx, feature in enumerate(selected_features):
-            col = cols[idx % 4]
-            with col:
-                manual_inputs[feature] = st.number_input(
-                    f"{feature}:",
-                    value=10.0,
-                    key=f"input_{feature}"
-                )
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        if st.button("🔮 Predict from Manual Features", key="btn_manual_predict", use_container_width=True):
-            st.session_state.current_feat_df = pd.DataFrame([manual_inputs])[selected_features]
-            st.session_state.current_cust_info = None
-            st.session_state.has_run_prediction = True
-            st.session_state.rejected_product_ids = set()
-            st.session_state.accepted_product_ids = set()
-            st.session_state.accepted_history = []
-            st.session_state.rejected_history = []
-            st.session_state.user_accepted_current = False
-            st.session_state.last_action_msg = ""
-            st.session_state.last_rejection_msg = ""
+    # Trigger New Recommendation Session
+    if st.button("🔮 Get Product Suggestion", use_container_width=True):
+        st.session_state.has_run_prediction = True
+        st.session_state.rejected_product_ids = set()
+        st.session_state.accepted_product_ids = set()
+        st.session_state.accepted_history = []
+        st.session_state.rejected_history = []
+        st.session_state.user_accepted_current = False
+        st.session_state.last_action_msg = ""
+        st.session_state.last_rejection_msg = ""
 
-    # Execution of Prediction Pipeline
-    if st.session_state.get("has_run_prediction", False) and st.session_state.get("current_feat_df") is not None:
-        input_df = st.session_state.current_feat_df
+    if st.session_state.get("has_run_prediction", False):
+        input_df = pd.DataFrame([input_values])[selected_features]
         m_obj = models[model_choice]
 
-        # Ranked predictions
+        # Fetch ranked predictions
         all_predictions = get_all_ranked_predictions(m_obj, encoder, products_df, input_df)
 
         # Filter out rejected & accepted products
@@ -403,7 +219,7 @@ def main():
 
         st.markdown("---")
 
-        # Session Activity Log & Price Summary
+        # Session Activity Log & Price Summary Shown Above
         if st.session_state.accepted_history or st.session_state.rejected_history:
             st.markdown("## 📊 Session Activity Summary & Cart Breakdown")
             
@@ -418,7 +234,7 @@ def main():
 
                 st.markdown("### 🛒 Cart Items & Price Breakdown")
                 c_m1, c_m2, c_m3 = st.columns(3)
-                c_m1.metric("Total Original Price", f"₹{total_original:,.2f}")
+                c_m1.metric("Total Original Price (Without Discount)", f"₹{total_original:,.2f}")
                 c_m2.metric("Total Discount Savings", f"₹{total_savings:,.2f}")
                 c_m3.metric("Final Payable Amount", f"₹{total_final:,.2f}")
 
@@ -430,6 +246,7 @@ def main():
 
             if wishlist_items:
                 st.markdown("### ❤️ Wishlist Favorites")
+                #st.info("✨ *Still considering my suggestions? You've saved these handpicked organic favorites in your Wishlist — move them to your Cart anytime you're ready!*")
                 st.info("✨ *Not sure yet? Pop it in your Wishlist — no rush, it'll be waiting for you!*")
                 
                 for item in wishlist_items:
@@ -447,7 +264,7 @@ def main():
 
             if rejected_items:
                 st.markdown("### 🔴 Rejected Recommendations")
-                st.info("💡 *Take another look — move any rejected product directly to Cart or Wishlist!*")
+                st.info("💡 *I may have guessed incorrectly earlier, but take another look — you can still move any rejected product directly to Cart or Wishlist!*")
                 
                 for item in rejected_items:
                     col_text, col_b1, col_b2 = st.columns([3, 1, 1])
@@ -484,7 +301,7 @@ def main():
             st.success(st.session_state.last_action_msg)
 
         if not available_predictions:
-            st.info("ℹ️ No more product suggestions available for these inputs! Change Customer ID to start fresh.")
+            st.info("ℹ️ No more product suggestions available for these feature inputs! Enter new feature values above to start fresh.")
             return
 
         current_item = available_predictions[0]

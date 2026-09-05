@@ -3,3 +3,6 @@ numpy
 streamlit
 mysql-connector-python
 pymysql
+lightgbm
+xgboost
+scikit-learn
