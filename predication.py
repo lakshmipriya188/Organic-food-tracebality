@@ -1,14 +1,12 @@
 """
-Streamlit Interactive Product Recommendation Engine
+Streamlit UI for AI Product Recommendation Engine (LightGBM)
 File: predication.py
 
-Features:
-- Primary Input: Customer ID (Queries database for Customer Name & Order_Details transaction history)
-- Displays Customer Name prominently (e.g. Rahul Sharma)
-- Dynamic 20 SHAP Feature calculation from Order_Details database schema
-- Irrespective of whether Customer ID or manual 20 features are provided, generates predictions
-- Robust pickle asset loading using multi-path resolution
-- Accepts / Rejects product recommendations and manages Cart & Wishlist session history
+Cleaned UI:
+- Uses LightGBM only
+- Uses current logged-in customer only
+- Category line removed
+- Session Activity Breakdown auto-cleared on customer re-login
 """
 
 import os
@@ -19,7 +17,6 @@ import streamlit as st
 import mysql.connector
 from mysql.connector import Error
 
-# 20 SHAP-selected optimal features in exact model input order
 selected_features = [
     'min_pp', 'p90_pp', 'p95_pad', 'p25_pp', 'p95_pp', 'max_pp',
     'min_pad', 'p75_pp', 'max_pad', 'p90_pad', 'avg_pp', 'p50_pp',
@@ -29,7 +26,6 @@ selected_features = [
 
 target_col = 'product_id'
 
-# Database Configuration Parameters
 MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
 MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
 MYSQL_USER = os.environ.get("MYSQL_USER", "root")
@@ -65,11 +61,7 @@ def get_direct_db_connection():
 
 
 def fetch_customer_info_and_features(customer_id: int):
-    """
-    Directly queries database for Customer_Details & Order_Details by customer_id.
-    Returns (cust_info_dict, features_df, error_msg).
-    If customer is not found, returns (None, None, "Customer is not in the current database").
-    """
+    """Directly queries database for Customer_Details & Order_Details by customer_id."""
     FALLBACK_CUSTOMERS = [
         {"customer_id": 1, "customer_name": "Rahul Sharma", "email_id": "rahul@gmail.com"},
         {"customer_id": 2, "customer_name": "Priya Singh", "email_id": "priya@gmail.com"},
@@ -103,7 +95,6 @@ def fetch_customer_info_and_features(customer_id: int):
         except Exception as e:
             print(f"DB query notice: {e}")
 
-    # Check fallback in-memory records if DB is offline
     if not cust_info:
         for fc in FALLBACK_CUSTOMERS:
             if fc["customer_id"] == int(customer_id):
@@ -116,11 +107,8 @@ def fetch_customer_info_and_features(customer_id: int):
                 ]
                 break
 
-    if not cust_info:
+    if not cust_info or not orders:
         return None, None, "Customer is not in the current database"
-
-    if not orders:
-        return cust_info, None, "Customer is not in the current database"
 
     df_orders = pd.DataFrame(orders)
     pp = df_orders['product_price'].astype(float).values
@@ -156,7 +144,7 @@ def fetch_customer_info_and_features(customer_id: int):
 
 @st.cache_resource
 def load_assets():
-    """Load trained models, label encoder, and products metadata using robust multi-path resolution."""
+    """Load LightGBM model, label encoder, and products metadata."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     cwd = os.getcwd()
 
@@ -172,23 +160,18 @@ def load_assets():
                 return c
         return None
 
-    models = {}
-    model_files = {
-        'LightGBM': ['lgbm_multiclass_model.pkl', 'lgbm_model.pkl'],
-        'XGBoost': ['xgb_multiclass_model.pkl', 'xgb_model.pkl'],
-        'Random Forest': ['rf_multiclass_model.pkl', 'rf_model.pkl']
-    }
+    model = None
+    model_files = ['lgbm_multiclass_model.pkl', 'lgbm_model.pkl', 'xgb_multiclass_model.pkl', 'rf_multiclass_model.pkl']
 
-    for name, f_list in model_files.items():
-        for fname in f_list:
-            resolved_p = resolve_path(fname)
-            if resolved_p:
-                try:
-                    with open(resolved_p, 'rb') as f:
-                        models[name] = pickle.load(f)
-                    break
-                except Exception as e:
-                    print(f"Could not load {resolved_p}: {e}")
+    for fname in model_files:
+        resolved_p = resolve_path(fname)
+        if resolved_p:
+            try:
+                with open(resolved_p, 'rb') as f:
+                    model = pickle.load(f)
+                break
+            except Exception as e:
+                print(f"Could not load {resolved_p}: {e}")
 
     encoder = None
     enc_path = resolve_path('label_encoder.pkl')
@@ -197,7 +180,7 @@ def load_assets():
             with open(enc_path, 'rb') as f:
                 encoder = pickle.load(f)
         except Exception as e:
-            print(f"Error loading label_encoder.pkl from {enc_path}: {e}")
+            print(f"Error loading label_encoder.pkl: {e}")
 
     products_df = None
     prod_csv_path = resolve_path('products.csv')
@@ -207,11 +190,11 @@ def load_assets():
         except Exception:
             pass
 
-    return models, encoder, products_df
+    return model, encoder, products_df
 
 
 def get_product_info(product_id, products_df):
-    """Retrieve product details including price, discount, and final price."""
+    """Retrieve product details."""
     if products_df is not None and 'product_id' in products_df.columns:
         match = products_df[products_df['product_id'] == product_id]
         if not match.empty:
@@ -257,7 +240,6 @@ def main():
         initial_sidebar_state="collapsed"
     )
 
-    # Hide automatic sidebar navigation
     st.markdown(
         """
         <style>
@@ -268,20 +250,28 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Page Header
     st.title("📦 Organic Product Recommendation Engine")
-    st.markdown("Enter a **Customer ID** or adjust features to fetch customer details and generate personalized product recommendations.")
-    st.markdown("---")
 
-    models, encoder, products_df = load_assets()
+    model, encoder, products_df = load_assets()
 
-    if not models:
-        st.error("⚠️ No trained model files could be loaded (`lgbm_multiclass_model.pkl`, `xgb_multiclass_model.pkl`, `rf_multiclass_model.pkl`). Please check pickle files.")
+    if not model or encoder is None:
+        st.error("⚠️ LightGBM model or Label Encoder could not be loaded. Please check pickle files.")
         return
 
-    if encoder is None:
-        st.error("⚠️ `label_encoder.pkl` file not found or could not be loaded.")
-        return
+    # Always use current logged-in customer
+    active_cid = st.session_state.get("user_id") or 1
+    current_uname = st.session_state.get("user") or "Customer"
+
+    # Auto-refresh session state on re-login
+    if st.session_state.get("last_pred_user_id") != active_cid:
+        st.session_state.last_pred_user_id = active_cid
+        st.session_state.rejected_product_ids = set()
+        st.session_state.accepted_product_ids = set()
+        st.session_state.accepted_history = []
+        st.session_state.rejected_history = []
+        st.session_state.user_accepted_current = False
+        st.session_state.last_action_msg = ""
+        st.session_state.last_rejection_msg = ""
 
     # Session State Initialization
     if "rejected_product_ids" not in st.session_state:
@@ -299,271 +289,132 @@ def main():
     if "last_rejection_msg" not in st.session_state:
         st.session_state.last_rejection_msg = ""
 
-    # Model Selector
-    model_choice = st.selectbox(
-        "Select Prediction Model:",
-        options=list(models.keys()),
-        index=0
+    # Fetch Customer Info & 20 Features from Database
+    cust_info, feat_df, err = fetch_customer_info_and_features(active_cid)
+
+    if err or feat_df is None:
+        st.error("Customer is not in the current database")
+        return
+
+    # Display Customer Profile Card (Customer Name & Email only)
+    st.markdown(
+        f"""
+        <div style="
+            background: linear-gradient(135deg, #1B4D3E 0%, #0F291E 100%);
+            border-radius: 16px;
+            padding: 1.4rem 1.8rem;
+            color: #FFFFFF;
+            margin: 1rem 0 1.5rem 0;
+            box-shadow: 0 8px 24px rgba(27, 77, 62, 0.15);
+        ">
+            <div style="font-size: 0.78rem; font-weight: 800; color: #4ADE80; letter-spacing: 1.5px; text-transform: uppercase;">
+                VERIFIED CUSTOMER PROFILE
+            </div>
+            <div style="font-size: 1.9rem; font-weight: 800; font-family: 'Poppins', sans-serif; color: #FFFFFF; margin: 4px 0 2px 0;">
+                👤 Customer Name: {cust_info.get('customer_name', current_uname)}
+            </div>
+            <div style="font-size: 0.92rem; color: #DCFCE7;">
+                📧 Email ID: <b>{cust_info.get('email_id', 'N/A')}</b>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    # Input Mode Tabs: Customer ID vs Manual Features
-    tab_cust_id, tab_manual = st.tabs(["👤 Predict by Customer ID", "⚙️ Predict by Manual 20 Features"])
+    # Generate predictions using LightGBM
+    all_predictions = get_all_ranked_predictions(model, encoder, products_df, feat_df)
 
-    input_df = None
-    current_customer_info = None
+    # Filter out rejected & accepted products
+    available_predictions = [
+        p for p in all_predictions
+        if p['product_id'] not in st.session_state.rejected_product_ids
+        and p['product_id'] not in st.session_state.accepted_product_ids
+    ]
 
-    with tab_cust_id:
-        st.markdown("### Enter Customer ID for Database Lookup")
-        cust_id_in = st.number_input("Customer ID:", min_value=1, value=1, step=1, key="cust_id_input_num")
+    # Feedback messages
+    if st.session_state.last_rejection_msg:
+        st.warning(st.session_state.last_rejection_msg)
 
-        if st.button("🔍 Fetch Customer & Predict", key="btn_fetch_cust", use_container_width=True):
-            cust_info, feat_df, err = fetch_customer_info_and_features(cust_id_in)
-            if err or feat_df is None:
-                st.error("Customer is not in the current database")
-                st.session_state.current_feat_df = None
-                st.session_state.current_cust_info = None
+    if st.session_state.last_action_msg:
+        st.success(st.session_state.last_action_msg)
+
+    if not available_predictions:
+        st.info("ℹ️ No more product suggestions available.")
+        return
+
+    current_item = available_predictions[0]
+    prod_id = current_item['product_id']
+
+    st.markdown("### 🎯 Recommended Product")
+
+    with st.container():
+        col_info, col_actions = st.columns([3, 2])
+
+        with col_info:
+            st.markdown(f"### {current_item['product_name']}")
+            st.markdown(f"**Original Price:** ~~₹{current_item['price']:,.2f}~~ | **Final Price:** **₹{current_item['final_price']:,.2f}** ({current_item['discount']:.0f}% OFF)")
+
+        with col_actions:
+            st.write("")
+            st.write("")
+            if not st.session_state.user_accepted_current:
+                st.markdown("**Do you like this product suggestion?**")
+                c_acc, c_rej = st.columns(2)
+                
+                if c_acc.button("Accept ✅", key=f"btn_accept_{prod_id}"):
+                    st.session_state.user_accepted_current = True
+                    st.session_state.last_rejection_msg = ""
+                    st.rerun()
+
+                if c_rej.button("Reject ❌", key=f"btn_reject_{prod_id}"):
+                    st.session_state.rejected_product_ids.add(prod_id)
+                    st.session_state.rejected_history.append({
+                        "id": prod_id,
+                        "name": current_item['product_name'],
+                        "price": current_item['price'],
+                        "discount": current_item['discount'],
+                        "final_price": current_item['final_price']
+                    })
+                    st.session_state.last_rejection_msg = "😔 Sorry for suggesting a bad one! Loading next recommendation..."
+                    st.session_state.last_action_msg = ""
+                    st.session_state.user_accepted_current = False
+                    st.rerun()
+
             else:
-                st.session_state.current_feat_df = feat_df
-                st.session_state.current_cust_info = cust_info
-                st.session_state.has_run_prediction = True
-                st.session_state.rejected_product_ids = set()
-                st.session_state.accepted_product_ids = set()
-                st.session_state.accepted_history = []
-                st.session_state.rejected_history = []
-                st.session_state.user_accepted_current = False
-                st.session_state.last_action_msg = ""
-                st.session_state.last_rejection_msg = ""
-
-        # Display Customer Info Card if fetched
-        if st.session_state.get("current_cust_info"):
-            c_info = st.session_state.current_cust_info
-            st.markdown(
-                f"""
-                <div style="
-                    background: linear-gradient(135deg, #1B4D3E 0%, #0F291E 100%);
-                    border-radius: 16px;
-                    padding: 1.4rem;
-                    color: #FFFFFF;
-                    margin-top: 1rem;
-                    box-shadow: 0 8px 20px rgba(27, 77, 62, 0.15);
-                ">
-                    <div style="font-size: 0.8rem; font-weight: 700; color: #4ADE80; letter-spacing: 1.5px; text-transform: uppercase;">
-                        VERIFIED CUSTOMER PROFILE
-                    </div>
-                    <div style="font-size: 1.8rem; font-weight: 800; font-family: 'Poppins', sans-serif; color: #FFFFFF; margin: 4px 0;">
-                        👤 Customer Name: {c_info.get('customer_name', 'N/A')}
-                    </div>
-                    <div style="font-size: 0.95rem; color: #DCFCE7;">
-                        📧 Email ID: <b>{c_info.get('email_id', 'N/A')}</b> | 🆔 Customer ID: <b>#{c_info.get('customer_id')}</b>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    with tab_manual:
-        st.markdown("### Manual 20 SHAP Feature Inputs")
-        manual_inputs = {}
-        cols = st.columns(4)
-        for idx, feature in enumerate(selected_features):
-            col = cols[idx % 4]
-            with col:
-                manual_inputs[feature] = st.number_input(
-                    f"{feature}:",
-                    value=10.0,
-                    key=f"input_{feature}"
-                )
-
-        if st.button("🔮 Predict from Manual Features", key="btn_manual_predict", use_container_width=True):
-            st.session_state.current_feat_df = pd.DataFrame([manual_inputs])[selected_features]
-            st.session_state.current_cust_info = None
-            st.session_state.has_run_prediction = True
-            st.session_state.rejected_product_ids = set()
-            st.session_state.accepted_product_ids = set()
-            st.session_state.accepted_history = []
-            st.session_state.rejected_history = []
-            st.session_state.user_accepted_current = False
-            st.session_state.last_action_msg = ""
-            st.session_state.last_rejection_msg = ""
-
-    # Execution of Prediction Pipeline
-    if st.session_state.get("has_run_prediction", False) and st.session_state.get("current_feat_df") is not None:
-        input_df = st.session_state.current_feat_df
-        m_obj = models[model_choice]
-
-        # Ranked predictions
-        all_predictions = get_all_ranked_predictions(m_obj, encoder, products_df, input_df)
-
-        # Filter out rejected & accepted products
-        available_predictions = [
-            p for p in all_predictions
-            if p['product_id'] not in st.session_state.rejected_product_ids
-            and p['product_id'] not in st.session_state.accepted_product_ids
-        ]
-
-        st.markdown("---")
-
-        # Session Activity Log & Price Summary
-        if st.session_state.accepted_history or st.session_state.rejected_history:
-            st.markdown("## 📊 Session Activity Summary & Cart Breakdown")
-            
-            cart_items = [x for x in st.session_state.accepted_history if x["action"] == "Cart"]
-            wishlist_items = [x for x in st.session_state.accepted_history if x["action"] == "Wishlist"]
-            rejected_items = st.session_state.rejected_history
-
-            if cart_items:
-                total_original = sum(x["price"] for x in cart_items)
-                total_final = sum(x["final_price"] for x in cart_items)
-                total_savings = total_original - total_final
-
-                st.markdown("### 🛒 Cart Items & Price Breakdown")
-                c_m1, c_m2, c_m3 = st.columns(3)
-                c_m1.metric("Total Original Price", f"₹{total_original:,.2f}")
-                c_m2.metric("Total Discount Savings", f"₹{total_savings:,.2f}")
-                c_m3.metric("Final Payable Amount", f"₹{total_final:,.2f}")
-
-                for item in cart_items:
-                    st.markdown(
-                        f"- 🛒 **{item['name']}** (`#{item['id']}`) — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)"
-                    )
-                st.markdown("---")
-
-            if wishlist_items:
-                st.markdown("### ❤️ Wishlist Favorites")
-                st.info("✨ *Not sure yet? Pop it in your Wishlist — no rush, it'll be waiting for you!*")
+                st.success("✅ **Product Accepted! Choose an action:**")
                 
-                for item in wishlist_items:
-                    w_col1, w_col2 = st.columns([3.5, 1])
-                    with w_col1:
-                        st.markdown(
-                            f"- ❤️ **{item['name']}** (`#{item['id']}`) — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)"
-                        )
-                    with w_col2:
-                        if st.button("Add to Cart 🛒", key=f"wish_to_cart_{item['id']}"):
-                            item["action"] = "Cart"
-                            st.session_state.last_action_msg = f"🎉 Moved **{item['name']}** from Wishlist to **Cart**!"
-                            st.rerun()
-                st.markdown("---")
+                b_cart = st.button("🛒 Add to Cart", key=f"cart_{prod_id}", use_container_width=True)
+                b_wish = st.button("❤️ Add to Wishlist", key=f"wish_{prod_id}", use_container_width=True)
 
-            if rejected_items:
-                st.markdown("### 🔴 Rejected Recommendations")
-                st.info("💡 *Take another look — move any rejected product directly to Cart or Wishlist!*")
-                
-                for item in rejected_items:
-                    col_text, col_b1, col_b2 = st.columns([3, 1, 1])
-                    with col_text:
-                        st.markdown(f"- ❌ **{item['name']}** (`#{item['id']}`) — Price: **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
-                    with col_b1:
-                        if st.button("Move to Cart 🛒", key=f"move_cart_{item['id']}"):
-                            st.session_state.rejected_history = [x for x in st.session_state.rejected_history if x["id"] != item["id"]]
-                            st.session_state.rejected_product_ids.discard(item["id"])
-                            item_copy = item.copy()
-                            item_copy["action"] = "Cart"
-                            st.session_state.accepted_history.append(item_copy)
-                            st.session_state.accepted_product_ids.add(item["id"])
-                            st.session_state.last_action_msg = f"🎉 Moved **{item['name']}** from Rejected list to **Cart**!"
-                            st.rerun()
-                    with col_b2:
-                        if st.button("Move to Wishlist ❤️", key=f"move_wish_{item['id']}"):
-                            st.session_state.rejected_history = [x for x in st.session_state.rejected_history if x["id"] != item["id"]]
-                            st.session_state.rejected_product_ids.discard(item["id"])
-                            item_copy = item.copy()
-                            item_copy["action"] = "Wishlist"
-                            st.session_state.accepted_history.append(item_copy)
-                            st.session_state.accepted_product_ids.add(item["id"])
-                            st.session_state.last_action_msg = f"🎉 Moved **{item['name']}** from Rejected list to **Wishlist**!"
-                            st.rerun()
+                if b_cart:
+                    st.session_state.accepted_product_ids.add(prod_id)
+                    st.session_state.accepted_history.append({
+                        "id": prod_id,
+                        "name": current_item['product_name'],
+                        "price": current_item['price'],
+                        "discount": current_item['discount'],
+                        "final_price": current_item['final_price'],
+                        "action": "Cart"
+                    })
+                    st.session_state.last_action_msg = f"🎉 **{current_item['product_name']}** added to your Cart!"
+                    st.session_state.user_accepted_current = False
+                    st.session_state.last_rejection_msg = ""
+                    st.rerun()
 
-            st.markdown("---")
-
-        # Feedback messages
-        if st.session_state.last_rejection_msg:
-            st.warning(st.session_state.last_rejection_msg)
-
-        if st.session_state.last_action_msg:
-            st.success(st.session_state.last_action_msg)
-
-        if not available_predictions:
-            st.info("ℹ️ No more product suggestions available for these inputs! Change Customer ID to start fresh.")
-            return
-
-        current_item = available_predictions[0]
-        prod_id = current_item['product_id']
-
-        st.markdown(f"### 🎯 Recommended Product (Model: {model_choice})")
-
-        with st.container():
-            col_info, col_actions = st.columns([3, 2])
-
-            with col_info:
-                st.markdown(f"### {current_item['product_name']}")
-                st.markdown(f"**Model Rank:** #{current_item['rank']} | **Product ID:** `#{prod_id}`")
-                st.markdown(f"**Original Price:** ~~₹{current_item['price']:,.2f}~~ | **Final Price:** **₹{current_item['final_price']:,.2f}** ({current_item['discount']:.0f}% OFF)")
-                st.markdown(f"**Category:** {current_item['category']}")
-                st.markdown(f"**Model Confidence Score:** `{current_item['probability']:.2f}%`")
-                st.progress(float(current_item['raw_prob']))
-
-            with col_actions:
-                st.write("")
-                st.write("")
-                if not st.session_state.user_accepted_current:
-                    st.markdown("**Do you like this product suggestion?**")
-                    c_acc, c_rej = st.columns(2)
-                    
-                    if c_acc.button("Accept ✅", key=f"btn_accept_{prod_id}"):
-                        st.session_state.user_accepted_current = True
-                        st.session_state.last_rejection_msg = ""
-                        st.rerun()
-
-                    if c_rej.button("Reject ❌", key=f"btn_reject_{prod_id}"):
-                        st.session_state.rejected_product_ids.add(prod_id)
-                        st.session_state.rejected_history.append({
-                            "id": prod_id,
-                            "name": current_item['product_name'],
-                            "price": current_item['price'],
-                            "discount": current_item['discount'],
-                            "final_price": current_item['final_price']
-                        })
-                        st.session_state.last_rejection_msg = "😔 I am sorry for suggesting a bad one! Can you please allow me to suggest a product for the next one..."
-                        st.session_state.last_action_msg = ""
-                        st.session_state.user_accepted_current = False
-                        st.rerun()
-
-                else:
-                    st.success("✅ **Product Accepted! Choose an action below:**")
-                    
-                    b_cart = st.button("🛒 Add to Cart", key=f"cart_{prod_id}", use_container_width=True)
-                    b_wish = st.button("❤️ Add to Wishlist", key=f"wish_{prod_id}", use_container_width=True)
-
-                    if b_cart:
-                        st.session_state.accepted_product_ids.add(prod_id)
-                        st.session_state.accepted_history.append({
-                            "id": prod_id,
-                            "name": current_item['product_name'],
-                            "price": current_item['price'],
-                            "discount": current_item['discount'],
-                            "final_price": current_item['final_price'],
-                            "action": "Cart"
-                        })
-                        st.session_state.last_action_msg = f"🎉 **{current_item['product_name']}** added to your **Cart** successfully!"
-                        st.session_state.user_accepted_current = False
-                        st.session_state.last_rejection_msg = ""
-                        st.rerun()
-
-                    if b_wish:
-                        st.session_state.accepted_product_ids.add(prod_id)
-                        st.session_state.accepted_history.append({
-                            "id": prod_id,
-                            "name": current_item['product_name'],
-                            "price": current_item['price'],
-                            "discount": current_item['discount'],
-                            "final_price": current_item['final_price'],
-                            "action": "Wishlist"
-                        })
-                        st.session_state.last_action_msg = f"🎉 **{current_item['product_name']}** added to your **Wishlist** successfully!"
-                        st.session_state.user_accepted_current = False
-                        st.session_state.last_rejection_msg = ""
-                        st.rerun()
+                if b_wish:
+                    st.session_state.accepted_product_ids.add(prod_id)
+                    st.session_state.accepted_history.append({
+                        "id": prod_id,
+                        "name": current_item['product_name'],
+                        "price": current_item['price'],
+                        "discount": current_item['discount'],
+                        "final_price": current_item['final_price'],
+                        "action": "Wishlist"
+                    })
+                    st.session_state.last_action_msg = f"🎉 **{current_item['product_name']}** added to your Wishlist!"
+                    st.session_state.user_accepted_current = False
+                    st.session_state.last_rejection_msg = ""
+                    st.rerun()
 
 
 if __name__ == '__main__':

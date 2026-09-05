@@ -183,6 +183,7 @@ def render_login_page():
                             st.session_state.user = cust["customer_name"]
                             st.session_state.user_email = cust["email_id"]
                             st.session_state.user_id = cust["customer_id"]
+                            st.session_state.show_ai_login_dialog = True
                             load_cart_from_db(cust["customer_id"])
                             st.session_state.page = "home"
                             st.success(f"Welcome back, {cust['customer_name']}! Redirecting to store...")
@@ -210,6 +211,7 @@ def render_login_page():
                             st.session_state.user = new_cust["customer_name"]
                             st.session_state.user_email = new_cust["email_id"]
                             st.session_state.user_id = new_cust["customer_id"]
+                            st.session_state.show_ai_login_dialog = True
                             load_cart_from_db(new_cust["customer_id"])
                             st.session_state.page = "home"
                             st.success(f"Account created successfully for {new_cust['customer_name']}!")
