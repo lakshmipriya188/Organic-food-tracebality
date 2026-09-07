@@ -228,30 +228,27 @@ def main():
         user_name = st.session_state.get("user", "Customer")
         st.markdown(
             f"""
-            <div style="
-                background: linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%);
-                border: 2px solid #86EFAC;
-                border-radius: 18px;
-                padding: 1.4rem 1.8rem;
-                margin-bottom: 1.2rem;
-                box-shadow: 0 8px 24px rgba(34, 197, 94, 0.12);
-            ">
-                <div style="font-family: 'Poppins', sans-serif; font-size: 0.78rem; font-weight: 800; color: #166534; letter-spacing: 1.5px; text-transform: uppercase;">
-                    🔔 AI RECOMMENDATION ALERT
-                </div>
-                <div style="font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 800; color: #15803D; margin: 4px 0 2px 0;">
-                    Welcome back, {user_name}!
-                </div>
-                <div style="font-size: 0.92rem; color: #166534;">
-                    We extracted 20 SHAP features from your <code>Order_Details</code> purchase history. Explore your personalized AI organic recommendations!
-                </div>
-            </div>
-            """,
+<div style="
+background: linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%);
+border: 2px solid #86EFAC;
+border-radius: 18px;
+padding: 1.4rem 1.8rem;
+margin-bottom: 1.2rem;
+box-shadow: 0 8px 24px rgba(34, 197, 94, 0.12);
+">
+<div style="font-family: 'Poppins', sans-serif; font-size: 0.78rem; font-weight: 800; color: #166534; letter-spacing: 1.5px; text-transform: uppercase;">
+🔔 AI RECOMMENDATION ALERT
+</div>
+<div style="font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 800; color: #15803D; margin: 4px 0 2px 0;">
+Welcome back, {user_name}!
+</div>
+</div>
+""",
             unsafe_allow_html=True
         )
         col_dlg_btn, col_dlg_dismiss = st.columns([2.5, 1])
         with col_dlg_btn:
-            if st.button("🔮 View My Personal AI Recommendations", key="dlg_ai_rec_btn", type="primary", use_container_width=True):
+            if st.button("Recommendations", key="dlg_ai_rec_btn", type="primary", use_container_width=True):
                 st.session_state.show_ai_login_dialog = False
                 go_to("ml_prediction")
                 st.rerun()
