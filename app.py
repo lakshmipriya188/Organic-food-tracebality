@@ -205,7 +205,7 @@ def inject_classic_styles():
 
 def main():
     st.set_page_config(
-        page_title="Organic Foods | Pure Roots & 100% Organic",
+        page_title="Farmora | Pure Roots & 100% Organic",
         page_icon="🌿",
         layout="wide",
         initial_sidebar_state="collapsed"

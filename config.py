@@ -1,6 +1,6 @@
 """Application configuration and design tokens for Organic Foods."""
 
-APP_NAME = "Organic Foods"
+APP_NAME = "Farmora"
 APP_SUBTITLE = "PURE ROOTS · 100% ORGANIC"
 CURRENCY = "₹"
 HELPLINE = "+91 95909 22000"

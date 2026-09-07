@@ -44,32 +44,42 @@ def render_header():
             unsafe_allow_html=True
         )
 
-    # 2. Header Actions: AI Predict, Wishlist, Cart, Account
+    # 2. Header Actions: Login only when pre-login, full actions when logged in
     with col_actions:
-        w_count = len(wishlist_items())
-        c_count = cart_count()
+        is_logged_in = bool(st.session_state.get("user"))
 
-        w_label = f"❤️ Wishlist ({w_count})" if w_count > 0 else "🤍 Wishlist"
-        c_label = f"🛒 Cart ({c_count})" if c_count > 0 else "🛒 Cart"
-        user_name = st.session_state.user.split(" ")[0] if st.session_state.user else "Log in"
-        u_label = f"👤 {user_name}"
+        if not is_logged_in:
+            # Pre-login navigation: Show ONLY Login button
+            _, login_col = st.columns([3, 1.2])
+            with login_col:
+                if st.button("🔑 Log in", key="hdr_prelogin_btn", type="primary", use_container_width=True):
+                    go_to("login")
+                    st.rerun()
+        else:
+            w_count = len(wishlist_items())
+            c_count = cart_count()
 
-        act_col1, act_col2, act_col3, act_col4 = st.columns(4)
-        with act_col1:
-            if st.button("🤖 AI Predict", key="hdr_ai_btn", use_container_width=True):
-                go_to("ml_prediction")
-                st.rerun()
-        with act_col2:
-            if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
-                go_to("wishlist")
-                st.rerun()
-        with act_col3:
-            if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
-                go_to("cart")
-                st.rerun()
-        with act_col4:
-            if st.button(u_label, key="hdr_user_btn", use_container_width=True):
-                go_to("account")
-                st.rerun()
+            w_label = f"❤️ Wishlist ({w_count})" if w_count > 0 else "🤍 Wishlist"
+            c_label = f"🛒 Cart ({c_count})" if c_count > 0 else "🛒 Cart"
+            user_name = st.session_state.user.split(" ")[0] if st.session_state.user else "Log in"
+            u_label = f"👤 {user_name}"
+
+            act_col1, act_col2, act_col3, act_col4 = st.columns(4)
+            with act_col1:
+                if st.button("🤖 AI Predict", key="hdr_ai_btn", use_container_width=True):
+                    go_to("ml_prediction")
+                    st.rerun()
+            with act_col2:
+                if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
+                    go_to("wishlist")
+                    st.rerun()
+            with act_col3:
+                if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
+                    go_to("cart")
+                    st.rerun()
+            with act_col4:
+                if st.button(u_label, key="hdr_user_btn", use_container_width=True):
+                    go_to("account")
+                    st.rerun()
 
     st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 0.8rem 0 1.5rem 0;'>", unsafe_allow_html=True)

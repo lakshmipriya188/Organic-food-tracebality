@@ -1,34 +1,17 @@
 import streamlit as st
-from config import CURRENCY
+from config import CURRENCY, APP_NAME, APP_SUBTITLE
 from utils.cart_manager import go_to, logout_user, load_cart_from_db
 from db_manager import verify_customer_login, register_customer, fetch_order_history_db
+from utils.image_utils import get_image_src
 
 
 def render_login_page():
+    # 1. LOGGED IN STATE DISPLAY
     if st.session_state.get("user"):
         if st.button("← Back to home"):
             go_to("home")
             st.rerun()
 
-    st.markdown(
-        """
-        <div style="text-align:center; margin-bottom:1.8rem;">
-            <div style="font-size:0.82rem; font-weight:800; color:#16A34A; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:4px;">
-                ORGANIC FOOD TRACEABILITY PORTAL
-            </div>
-            <div style="font-size:2.3rem; font-weight:800; font-family:'Playfair Display', serif; color:#1B4D3E;">
-                Customer Portal & Order History 👤
-            </div>
-            <div style="font-size:0.92rem; color:#64748B; margin-top:6px;">
-                Please log in with your registered email ID to access the store UI & product traceability details.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # 1. LOGGED IN STATE DISPLAY
-    if st.session_state.get("user"):
         user_name = st.session_state.get("user", "Customer")
         user_email = st.session_state.get("user_email", "")
         user_id = st.session_state.get("user_id", "N/A")
@@ -46,9 +29,9 @@ def render_login_page():
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                     <div>
                         <span style="background: rgba(34, 197, 94, 0.2); color: #4ADE80; font-size: 0.75rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(74, 222, 128, 0.3); text-transform: uppercase; letter-spacing: 1px;">
-                            Verified Customer Account
+                            Verified {APP_NAME} Customer Account
                         </span>
-                        <h2 style="font-family:'Playfair Display', serif; color: #FFFFFF !important; margin: 0.6rem 0 0.2rem 0; font-size: 2rem;">
+                        <h2 style="font-family:'Poppins', sans-serif; color: #FFFFFF !important; margin: 0.6rem 0 0.2rem 0; font-size: 2rem;">
                             Welcome, {user_name}!
                         </h2>
                         <p style="color: #A3B8AD; margin: 0; font-size: 0.95rem;">
@@ -77,7 +60,7 @@ def render_login_page():
 
         st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0;'>", unsafe_allow_html=True)
 
-        # ORDER HISTORY SECTION
+        # ORDER HISTORY SECTION FOR LOGGED-IN USERS
         st.markdown(
             """
             <div style="font-family:'Poppins', sans-serif; font-size:1.4rem; font-weight:700; color:#1B4D3E; margin-bottom:1rem;">
@@ -145,20 +128,171 @@ def render_login_page():
                 )
         return
 
-    # 2. LOG IN / SIGN UP FORM VIEW
-    _, col_center, _ = st.columns([1, 2.2, 1])
+    # 2. PRE-LOGIN HERO & CUSTOMER PORTAL VIEW
+    hero_left, portal_right = st.columns([1.15, 0.85], gap="large")
 
-    with col_center:
+    with hero_left:
+        # Organic Farming Hero Card Showcase
+        st.markdown(
+            f"""
+<div style="
+background: linear-gradient(145deg, #0F382C 0%, #1B4D3E 60%, #15803D 100%);
+border-radius: 24px;
+padding: 2.8rem 2.4rem;
+color: #FFFFFF;
+box-shadow: 0 20px 45px rgba(15, 56, 44, 0.22);
+height: 100%;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+">
+<div>
+<div style="
+display: inline-flex;
+align-items: center;
+gap: 6px;
+background: rgba(34, 197, 94, 0.2);
+border: 1px solid rgba(134, 239, 172, 0.35);
+padding: 5px 14px;
+border-radius: 20px;
+font-size: 0.75rem;
+font-weight: 800;
+color: #86EFAC;
+letter-spacing: 2px;
+text-transform: uppercase;
+margin-bottom: 1.2rem;
+">
+🌱 100% CERTIFIED PURE ORGANIC HARVEST
+</div>
+<div style="
+font-family: 'Poppins', sans-serif;
+font-size: 2.6rem;
+font-weight: 800;
+color: #FFFFFF;
+line-height: 1.15;
+letter-spacing: -0.5px;
+margin-bottom: 1rem;
+">
+Pure Organic Harvest,<br>
+<span style="color: #86EFAC;">Direct From Farm To Table.</span>
+</div>
+<div style="
+font-size: 0.98rem;
+color: #E2E8F0;
+line-height: 1.6;
+margin-bottom: 2rem;
+">
+Welcome to <b>{APP_NAME}</b> — your trusted co-operative platform for 100% pesticide-free staples, ancient millets, cold pressed oils, and A2 Desi cow ghee with transparent farm batch traceability.
+</div>
+</div>
+
+<div>
+<div style="
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 10px;
+margin-bottom: 1.5rem;
+">
+<div style="
+background: rgba(255, 255, 255, 0.12);
+backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.2);
+border-radius: 14px;
+padding: 8px;
+text-align: center;
+">
+<img src="{get_image_src('assets/images/fruits.jpg')}" style="width:100%; height:75px; object-fit:cover; border-radius:10px; margin-bottom:4px;">
+<div style="font-size:0.72rem; font-weight:800; color:#FFFFFF;">Fruits</div>
+<div style="font-size:0.65rem; color:#86EFAC;">Farm Fresh</div>
+</div>
+<div style="
+background: rgba(255, 255, 255, 0.12);
+backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.2);
+border-radius: 14px;
+padding: 8px;
+text-align: center;
+">
+<img src="{get_image_src('assets/images/vegetables.jpg')}" style="width:100%; height:75px; object-fit:cover; border-radius:10px; margin-bottom:4px;">
+<div style="font-size:0.72rem; font-weight:800; color:#FFFFFF;">Veggies</div>
+<div style="font-size:0.65rem; color:#86EFAC;">100% Organic</div>
+</div>
+<div style="
+background: rgba(255, 255, 255, 0.12);
+backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.2);
+border-radius: 14px;
+padding: 8px;
+text-align: center;
+">
+<img src="{get_image_src('assets/images/millets.jpg')}" style="width:100%; height:75px; object-fit:cover; border-radius:10px; margin-bottom:4px;">
+<div style="font-size:0.72rem; font-weight:800; color:#FFFFFF;">Millets</div>
+<div style="font-size:0.65rem; color:#86EFAC;">Ancient Grains</div>
+</div>
+<div style="
+background: rgba(255, 255, 255, 0.12);
+backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.2);
+border-radius: 14px;
+padding: 8px;
+text-align: center;
+">
+<img src="{get_image_src('assets/images/oils.jpg')}" style="width:100%; height:75px; object-fit:cover; border-radius:10px; margin-bottom:4px;">
+<div style="font-size:0.72rem; font-weight:800; color:#FFFFFF;">Cold Oils</div>
+<div style="font-size:0.65rem; color:#86EFAC;">Pure Ghani</div>
+</div>
+</div>
+
+<div style="
+background: rgba(0, 0, 0, 0.2);
+border-radius: 14px;
+padding: 10px 14px;
+display: flex;
+justify-content: space-around;
+align-items: center;
+font-size: 0.75rem;
+font-weight: 700;
+color: #DCFCE7;
+letter-spacing: 0.5px;
+flex-wrap: wrap;
+gap: 6px;
+">
+<div>⚡ 100% Pesticide-Free</div>
+<div>🩺 Lab Audited</div>
+<div>👨‍🌾 Farmer Co-Op</div>
+<div>🔍 Traceable</div>
+</div>
+</div>
+</div>
+""",
+            unsafe_allow_html=True
+        )
+
+    with portal_right:
+        # CUSTOMER PORTAL CARD
         st.markdown(
             """
-            <div style="
-                background: #FFFFFF;
-                border: 1px solid #E2E9E3;
-                border-radius: 20px;
-                padding: 2.2rem;
-                box-shadow: 0 15px 35px rgba(27, 77, 62, 0.08);
-            ">
-            """,
+<div style="
+background: #FFFFFF;
+border: 1px solid #E2E9E3;
+border-radius: 24px;
+padding: 2.2rem;
+box-shadow: 0 18px 40px rgba(27, 77, 62, 0.08);
+">
+<div style="margin-bottom: 1.4rem;">
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px;">
+<div style="font-family:'Poppins', sans-serif; font-size: 1.8rem; font-weight: 800; color: #1B4D3E;">
+Customer Portal
+</div>
+<span style="background:#DCFCE7; color:#166534; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:12px; border:1px solid #86EFAC;">
+🔒 SECURE LOGIN
+</span>
+</div>
+<div style="font-size: 0.88rem; color: #4A6B5D;">
+Log in with your registered email ID to access the store & farm traceability details.
+</div>
+</div>
+""",
             unsafe_allow_html=True
         )
 
@@ -166,7 +300,7 @@ def render_login_page():
 
         with tab_login:
             st.markdown(
-                "<p style='font-size:0.88rem; color:#64748B; margin-bottom:1.2rem;'>Enter your registered email ID and password to log in.</p>",
+                "<p style='font-size:0.85rem; color:#64748B; margin-bottom:1rem; margin-top: 0.5rem;'>Enter your registered email ID and password to log in.</p>",
                 unsafe_allow_html=True
             )
             with st.form("login_form"):
@@ -193,7 +327,7 @@ def render_login_page():
 
         with tab_signup:
             st.markdown(
-                "<p style='font-size:0.88rem; color:#64748B; margin-bottom:1.2rem;'>Create a new account to record your details in the Customer_Details table.</p>",
+                "<p style='font-size:0.85rem; color:#64748B; margin-bottom:1rem; margin-top: 0.5rem;'>Create a new account to record your details in the Customer_Details table.</p>",
                 unsafe_allow_html=True
             )
             with st.form("signup_form"):
