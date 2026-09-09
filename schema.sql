@@ -145,6 +145,25 @@ CREATE TABLE IF NOT EXISTS Cart (
         REFERENCES Product(product_id)
 );
 
+-- Wishlist Table (Replica of Cart)
+CREATE TABLE IF NOT EXISTS Wishlist (
+    wishlist_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    product_id INT NOT NULL,
+    product_count INT NOT NULL,
+    product_price DECIMAL(10,2) NOT NULL,
+    product_discount DECIMAL(5,2) NOT NULL,
+    price_after_discount DECIMAL(10,2) NOT NULL,
+
+    CONSTRAINT fk_wishlist_customer
+        FOREIGN KEY (customer_id)
+        REFERENCES Customer_Details(customer_id),
+
+    CONSTRAINT fk_wishlist_product
+        FOREIGN KEY (product_id)
+        REFERENCES Product(product_id)
+);
+
 -- Order Details Table
 CREATE TABLE IF NOT EXISTS Order_Details (
     order_id INT AUTO_INCREMENT PRIMARY KEY,

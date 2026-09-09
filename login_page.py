@@ -1,6 +1,6 @@
 import streamlit as st
 from config import CURRENCY, APP_NAME, APP_SUBTITLE
-from utils.cart_manager import go_to, logout_user, load_cart_from_db
+from utils.cart_manager import go_to, logout_user, load_cart_from_db, load_wishlist_from_db
 from db_manager import verify_customer_login, register_customer, fetch_order_history_db
 from utils.image_utils import get_image_src
 
@@ -269,30 +269,25 @@ gap: 6px;
         )
 
     with portal_right:
-        # CUSTOMER PORTAL CARD
+        # SINGLE DECENT & CLASSY CUSTOMER LOGIN CARD
         st.markdown(
             """
-<div style="
-background: #FFFFFF;
-border: 1px solid #E2E9E3;
-border-radius: 24px;
-padding: 2.2rem;
-box-shadow: 0 18px 40px rgba(27, 77, 62, 0.08);
-">
-<div style="margin-bottom: 1.4rem;">
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px;">
-<div style="font-family:'Poppins', sans-serif; font-size: 1.8rem; font-weight: 800; color: #1B4D3E;">
-Customer Portal
-</div>
-<span style="background:#DCFCE7; color:#166534; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:12px; border:1px solid #86EFAC;">
-🔒 SECURE LOGIN
-</span>
-</div>
-<div style="font-size: 0.88rem; color: #4A6B5D;">
-Log in with your registered email ID to access the store & farm traceability details.
-</div>
-</div>
-""",
+            <div style="
+                background: #FFFFFF;
+                border: 1px solid #E2E9E3;
+                border-radius: 20px;
+                padding: 2rem;
+                box-shadow: 0 12px 32px rgba(15, 41, 30, 0.06);
+            ">
+                <div style="margin-bottom: 1.4rem;">
+                    <div style="font-family:'Poppins', sans-serif; font-size: 1.8rem; font-weight: 800; color: #1B4D3E;">
+                        Customer Login
+                    </div>
+                    <div style="font-size: 0.88rem; color: #4A6B5D; margin-top: 4px;">
+                        Log in with your registered email ID to access the store & farm traceability details.
+                    </div>
+                </div>
+            """,
             unsafe_allow_html=True
         )
 
@@ -306,7 +301,7 @@ Log in with your registered email ID to access the store & farm traceability det
             with st.form("login_form"):
                 email_input = st.text_input("Email ID", placeholder="Enter your email ID (e.g. rahul@gmail.com)")
                 password_input = st.text_input("Password", type="password", placeholder="Enter your password")
-                submitted = st.form_submit_button("Log In & Enter Store", use_container_width=True)
+                submitted = st.form_submit_button("Log In & Enter Store", use_container_width=True, type="primary")
 
                 if submitted:
                     if not email_input or not password_input:
@@ -319,6 +314,7 @@ Log in with your registered email ID to access the store & farm traceability det
                             st.session_state.user_id = cust["customer_id"]
                             st.session_state.show_ai_login_dialog = True
                             load_cart_from_db(cust["customer_id"])
+                            load_wishlist_from_db(cust["customer_id"])
                             st.session_state.page = "home"
                             st.success(f"Welcome back, {cust['customer_name']}! Redirecting to store...")
                             st.rerun()
@@ -347,6 +343,7 @@ Log in with your registered email ID to access the store & farm traceability det
                             st.session_state.user_id = new_cust["customer_id"]
                             st.session_state.show_ai_login_dialog = True
                             load_cart_from_db(new_cust["customer_id"])
+                            load_wishlist_from_db(new_cust["customer_id"])
                             st.session_state.page = "home"
                             st.success(f"Account created successfully for {new_cust['customer_name']}!")
                             st.rerun()

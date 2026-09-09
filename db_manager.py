@@ -129,6 +129,21 @@ def init_mysql_db():
             );
         """)
 
+        # Create Wishlist Table (Replica of Cart)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Wishlist (
+                wishlist_id INT AUTO_INCREMENT PRIMARY KEY,
+                customer_id INT NOT NULL,
+                product_id INT NOT NULL,
+                product_count INT NOT NULL,
+                product_price DECIMAL(10,2) NOT NULL,
+                product_discount DECIMAL(5,2) NOT NULL,
+                price_after_discount DECIMAL(10,2) NOT NULL,
+                CONSTRAINT fk_wishlist_customer FOREIGN KEY (customer_id) REFERENCES Customer_Details(customer_id) ON DELETE CASCADE,
+                CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id) REFERENCES Product(product_id) ON DELETE CASCADE
+            );
+        """)
+
         # Create Order_Details Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS Order_Details (
@@ -543,6 +558,116 @@ def clear_cart_db(customer_id: int) -> bool:
         return True
     except Error as e:
         print(f"MySQL error clearing cart: {e}")
+        return False
+
+
+def fetch_wishlist_items_db(customer_id: int) -> List[Dict[str, Any]]:
+    """Fetch wishlist items for a specific customer from MySQL Wishlist table joined with Product & Category."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT 
+                w.wishlist_id,
+                w.customer_id,
+                w.product_id,
+                w.product_count,
+                w.product_price,
+                w.product_discount,
+                w.price_after_discount,
+                p.product_name,
+                cat.category_name,
+                cat.category_id
+            FROM Wishlist w
+            JOIN Product p ON w.product_id = p.product_id
+            LEFT JOIN Category cat ON p.category_id = cat.category_id
+            WHERE w.customer_id = %s
+            ORDER BY w.wishlist_id ASC;
+        """
+        cursor.execute(query, (customer_id,))
+        items = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return items
+    except Error as e:
+        print(f"MySQL error fetching wishlist items: {e}")
+        return []
+
+
+def add_or_update_wishlist_db(customer_id: int, product_id: int, count: int, price: float, discount: float) -> bool:
+    """Add product to customer's wishlist or increment product_count if already exists."""
+    price_after_disc = round(price * (1 - (discount / 100.0)), 2)
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT wishlist_id, product_count FROM Wishlist WHERE customer_id = %s AND product_id = %s;",
+            (customer_id, product_id)
+        )
+        existing = cursor.fetchone()
+        if existing:
+            new_count = existing["product_count"] + count
+            cursor.execute(
+                "UPDATE Wishlist SET product_count = %s, product_price = %s, product_discount = %s, price_after_discount = %s WHERE wishlist_id = %s;",
+                (new_count, price, discount, price_after_disc, existing["wishlist_id"])
+            )
+        else:
+            cursor.execute(
+                """INSERT INTO Wishlist 
+                (customer_id, product_id, product_count, product_price, product_discount, price_after_discount)
+                VALUES (%s, %s, %s, %s, %s, %s);""",
+                (customer_id, product_id, count, price, discount, price_after_disc)
+            )
+        cursor.close()
+        conn.close()
+        return True
+    except Error as e:
+        print(f"MySQL error adding/updating wishlist: {e}")
+        return False
+
+
+def update_wishlist_count_db(customer_id: int, product_id: int, new_count: int) -> bool:
+    """Update product_count or delete if count <= 0."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor()
+        if new_count <= 0:
+            cursor.execute("DELETE FROM Wishlist WHERE customer_id = %s AND product_id = %s;", (customer_id, product_id))
+        else:
+            cursor.execute("UPDATE Wishlist SET product_count = %s WHERE customer_id = %s AND product_id = %s;", (new_count, customer_id, product_id))
+        cursor.close()
+        conn.close()
+        return True
+    except Error as e:
+        print(f"MySQL error updating wishlist count: {e}")
+        return False
+
+
+def remove_from_wishlist_db(customer_id: int, product_id: int) -> bool:
+    """Remove product from customer's wishlist."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Wishlist WHERE customer_id = %s AND product_id = %s;", (customer_id, product_id))
+        cursor.close()
+        conn.close()
+        return True
+    except Error as e:
+        print(f"MySQL error removing from wishlist: {e}")
+        return False
+
+
+def clear_wishlist_db(customer_id: int) -> bool:
+    """Clear all items from customer's wishlist."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Wishlist WHERE customer_id = %s;", (customer_id,))
+        cursor.close()
+        conn.close()
+        return True
+    except Error as e:
+        print(f"MySQL error clearing wishlist: {e}")
         return False
 
 

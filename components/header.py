@@ -2,7 +2,7 @@
 
 import streamlit as st
 from config import HELPLINE, APP_NAME, APP_SUBTITLE
-from utils.cart_manager import _init_state, go_to, cart_count, wishlist_items
+from utils.cart_manager import _init_state, go_to, cart_count, wishlist_count
 
 
 def render_header():
@@ -49,14 +49,17 @@ def render_header():
         is_logged_in = bool(st.session_state.get("user"))
 
         if not is_logged_in:
-            # Pre-login navigation: Show ONLY Login button
-            _, login_col = st.columns([3, 1.2])
-            with login_col:
-                if st.button("🔑 Log in", key="hdr_prelogin_btn", type="primary", use_container_width=True):
-                    go_to("login")
-                    st.rerun()
+            # Pre-login navigation: Top login button removed as requested
+            st.markdown(
+                """
+                <div style="text-align: right; font-family:'Poppins', sans-serif; font-size: 0.8rem; font-weight: 700; color: #16A34A; letter-spacing: 1px; padding: 6px 0;">
+                    🌿 PURE ORGANIC HARVEST & TRACEABILITY
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
         else:
-            w_count = len(wishlist_items())
+            w_count = wishlist_count()
             c_count = cart_count()
 
             w_label = f"❤️ Wishlist ({w_count})" if w_count > 0 else "🤍 Wishlist"
