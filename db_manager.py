@@ -404,10 +404,33 @@ def verify_customer_login(email_id: str, password: str) -> Optional[Dict[str, An
     except Error as e:
         print(f"MySQL error during verify_customer_login: {e}")
 
-    # Fallback in-memory check
     for fc in FALLBACK_CUSTOMERS:
         if fc["email_id"].lower() == clean_email and fc["password"] == password:
             return {"customer_id": fc["customer_id"], "customer_name": fc["customer_name"], "email_id": fc["email_id"]}
+    return None
+
+
+def get_customer_by_email(email_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch customer record from Customer_Details by email ID (without password check)."""
+    clean_email = email_id.strip().lower()
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT customer_id, customer_name, email_id, password FROM Customer_Details WHERE LOWER(email_id) = %s;",
+            (clean_email,)
+        )
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if user:
+            return user
+    except Error as e:
+        print(f"MySQL error during get_customer_by_email: {e}")
+
+    for fc in FALLBACK_CUSTOMERS:
+        if fc["email_id"].lower() == clean_email:
+            return fc
     return None
 
 

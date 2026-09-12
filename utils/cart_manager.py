@@ -39,6 +39,8 @@ def _init_state():
         st.session_state.user_email = None
     if "user_id" not in st.session_state:
         st.session_state.user_id = None
+    if "is_admin" not in st.session_state:
+        st.session_state.is_admin = False
     if "current_cart_user_id" not in st.session_state:
         st.session_state.current_cart_user_id = None
 
@@ -134,6 +136,7 @@ def logout_user():
     st.session_state.user = None
     st.session_state.user_email = None
     st.session_state.user_id = None
+    st.session_state.is_admin = False
     st.session_state.cart = {}
     st.session_state.wishlist = {}
     st.session_state.current_cart_user_id = None

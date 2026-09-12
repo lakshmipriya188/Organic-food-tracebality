@@ -1,0 +1,4 @@
+active_days_group,customer_count,total_revenue,total_orders,customer_pct,revenue_pct
+1-3 days,54141,74670502.39,122626,54.82,34.25
+4-7 days,42876,133961268.46,220448,43.41,61.44
+8-30 days,1742,9411889.03,15535,1.76,4.32

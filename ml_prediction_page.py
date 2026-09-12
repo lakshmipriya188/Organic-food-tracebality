@@ -244,10 +244,10 @@ def render_ml_prediction_page():
     st.markdown(
         """
         <div style="font-family:'Poppins', sans-serif; font-size:0.82rem; font-weight:700; color:#16A34A; letter-spacing:2px; text-transform:uppercase; margin-top:0.8rem; margin-bottom:4px;">
-            AI ORGANIC RECOMMENDATION ENGINE
+            PRODUCT RECOMMENDATION ENGINE
         </div>
         <div style="font-family:'Poppins', sans-serif; font-size:2rem; font-weight:700; color:#1B4D3E; margin-bottom:1.5rem;">
-            🤖 Personalized Product Prediction Portal
+            🤖 Product Recommendation
         </div>
         """,
         unsafe_allow_html=True
@@ -268,6 +268,7 @@ def render_ml_prediction_page():
         st.session_state.last_pred_user_id = active_cid
         st.session_state.rejected_product_ids = set()
         st.session_state.accepted_product_ids = set()
+        st.session_state.accepted_current_items = set()
         st.session_state.accepted_history = []
         st.session_state.rejected_history = []
         st.session_state.user_accepted_current = False
@@ -279,6 +280,8 @@ def render_ml_prediction_page():
         st.session_state.rejected_product_ids = set()
     if "accepted_product_ids" not in st.session_state:
         st.session_state.accepted_product_ids = set()
+    if "accepted_current_items" not in st.session_state:
+        st.session_state.accepted_current_items = set()
     if "accepted_history" not in st.session_state:
         st.session_state.accepted_history = []
     if "rejected_history" not in st.session_state:
@@ -343,68 +346,96 @@ def render_ml_prediction_page():
         st.info("ℹ️ No more recommendations available.")
         return
 
-    current_item = available_predictions[0]
-    prod_id = current_item['product_id']
+    st.markdown("### 🎯 Recommended Products for You")
 
-    st.markdown("### 🎯 Recommended Product")
+    top_predictions = available_predictions[:3]
+    cols = st.columns(len(top_predictions))
 
-    with st.container():
-        col_info, col_actions = st.columns([3, 2])
+    for idx, (col, item) in enumerate(zip(cols, top_predictions), 1):
+        prod_id = item['product_id']
+        with col:
+            st.markdown(
+                f"""
+                <div style="
+                    background: #FFFFFF;
+                    border: 1.5px solid #E2E9E3;
+                    border-radius: 16px;
+                    padding: 1.2rem;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+                    margin-bottom: 1rem;
+                ">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="background:#DCFCE7; color:#15803D; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase;">
+                            🎯 Option #{idx}
+                        </span>
+                        <span style="font-size:0.75rem; font-weight:600; color:#16A34A;">
+                            Match: {item['probability']:.1f}%
+                        </span>
+                    </div>
+                    <div style="font-family:'Poppins', sans-serif; font-size:1.1rem; font-weight:700; color:#1B4D3E; margin: 8px 0 4px 0; line-height:1.3; min-height: 2.6rem;">
+                        {item['product_name']}
+                    </div>
+                    <div style="font-size:0.8rem; color:#6B7280; margin-bottom:8px;">
+                        Category: <b>{item['category']}</b>
+                    </div>
+                    <div style="font-size:0.95rem; margin-bottom:10px;">
+                        <span style="text-decoration:line-through; color:#9CA3AF; font-size:0.8rem;">₹{item['price']:,.2f}</span>
+                        <span style="font-weight:800; color:#16A34A; font-size:1.1rem; margin-left:6px;">₹{item['final_price']:,.2f}</span>
+                        <span style="background:#FEE2E2; color:#DC2626; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:6px; margin-left:6px;">
+                            {item['discount']:.0f}% OFF
+                        </span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-        with col_info:
-            st.markdown(f"### {current_item['product_name']}")
-            st.markdown(f"**Original Price:** ~~₹{current_item['price']:,.2f}~~ | **Final Price:** **₹{current_item['final_price']:,.2f}** ({current_item['discount']:.0f}% OFF)")
-
-        with col_actions:
-            st.write("")
-            st.write("")
-            if not st.session_state.user_accepted_current:
-                st.markdown("**Do you like this product suggestion?**")
+            if prod_id not in st.session_state.accepted_current_items:
+                st.markdown("<div style='font-size:0.85rem; font-weight:600; color:#1B4D3E; margin-bottom:6px;'>Do you like this suggestion?</div>", unsafe_allow_html=True)
                 c_acc, c_rej = st.columns(2)
-                
-                if c_acc.button("Accept ✅", key=f"btn_accept_{prod_id}"):
-                    st.session_state.user_accepted_current = True
+
+                if c_acc.button("Accept ✅", key=f"btn_accept_{prod_id}_{idx}", use_container_width=True):
+                    st.session_state.accepted_current_items.add(prod_id)
                     st.session_state.last_rejection_msg = ""
                     st.rerun()
 
-                if c_rej.button("Reject ❌", key=f"btn_reject_{prod_id}"):
+                if c_rej.button("Reject ❌", key=f"btn_reject_{prod_id}_{idx}", use_container_width=True):
                     st.session_state.rejected_product_ids.add(prod_id)
                     st.session_state.rejected_history.append({
                         "id": prod_id,
-                        "name": current_item['product_name'],
-                        "price": current_item['price'],
-                        "discount": current_item['discount'],
-                        "final_price": current_item['final_price']
+                        "name": item['product_name'],
+                        "price": item['price'],
+                        "discount": item['discount'],
+                        "final_price": item['final_price']
                     })
-                    st.session_state.last_rejection_msg = "😔 Sorry for suggesting a bad one! Loading next recommendation..."
+                    st.session_state.last_rejection_msg = f"😔 Removed **{item['product_name']}**! Loading next recommendation..."
                     st.session_state.last_action_msg = ""
-                    st.session_state.user_accepted_current = False
+                    if prod_id in st.session_state.accepted_current_items:
+                        st.session_state.accepted_current_items.remove(prod_id)
                     st.rerun()
 
             else:
-                st.success("✅ **Product Accepted! Choose an action:**")
-                
-                b_cart = st.button("🛒 Add to Cart", key=f"cart_{prod_id}", use_container_width=True)
-                b_wish = st.button("❤️ Add to Wishlist", key=f"wish_{prod_id}", use_container_width=True)
+                st.success("✅ **Accepted! Choose action:**")
+                b_cart = st.button("🛒 Add to Cart", key=f"cart_{prod_id}_{idx}", use_container_width=True)
+                b_wish = st.button("❤️ Add to Wishlist", key=f"wish_{prod_id}_{idx}", use_container_width=True)
 
-                # SYNC WITH MAIN APP CART & WISHLIST
                 prod_dataclass = get_product_by_id(str(prod_id))
 
                 if b_cart:
                     st.session_state.accepted_product_ids.add(prod_id)
                     if prod_dataclass:
                         add_to_cart(prod_dataclass, variant="1kg", qty=1)
-                    
+
                     st.session_state.accepted_history.append({
                         "id": prod_id,
-                        "name": current_item['product_name'],
-                        "price": current_item['price'],
-                        "discount": current_item['discount'],
-                        "final_price": current_item['final_price'],
+                        "name": item['product_name'],
+                        "price": item['price'],
+                        "discount": item['discount'],
+                        "final_price": item['final_price'],
                         "action": "Cart"
                     })
-                    st.session_state.last_action_msg = f"🎉 **{current_item['product_name']}** added to Cart!"
-                    st.session_state.user_accepted_current = False
+                    st.session_state.last_action_msg = f"🎉 **{item['product_name']}** added to Cart!"
+                    st.session_state.accepted_current_items.remove(prod_id)
                     st.session_state.last_rejection_msg = ""
                     st.rerun()
 
@@ -412,17 +443,17 @@ def render_ml_prediction_page():
                     st.session_state.accepted_product_ids.add(prod_id)
                     if prod_dataclass:
                         toggle_wishlist(prod_dataclass)
-                    
+
                     st.session_state.accepted_history.append({
                         "id": prod_id,
-                        "name": current_item['product_name'],
-                        "price": current_item['price'],
-                        "discount": current_item['discount'],
-                        "final_price": current_item['final_price'],
+                        "name": item['product_name'],
+                        "price": item['price'],
+                        "discount": item['discount'],
+                        "final_price": item['final_price'],
                         "action": "Wishlist"
                     })
-                    st.session_state.last_action_msg = f"🎉 **{current_item['product_name']}** added to Wishlist!"
-                    st.session_state.user_accepted_current = False
+                    st.session_state.last_action_msg = f"🎉 **{item['product_name']}** added to Wishlist!"
+                    st.session_state.accepted_current_items.remove(prod_id)
                     st.session_state.last_rejection_msg = ""
                     st.rerun()
 

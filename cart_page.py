@@ -26,11 +26,8 @@ def render_cart_page():
 
     st.markdown(
         """
-        <div style="font-family:'Poppins', sans-serif; font-size:0.82rem; font-weight:700; color:#16A34A; letter-spacing:2px; text-transform:uppercase; margin-top:0.8rem; margin-bottom:4px;">
-            ORGANIC FOOD TRACEABILITY SYSTEM
-        </div>
         <div style="font-family:'Poppins', sans-serif; font-size:2rem; font-weight:700; color:#1B4D3E; margin-bottom:1.5rem;">
-            Shopping Cart & Checkout 🛒
+            Shopping Cart 🛒
         </div>
         """,
         unsafe_allow_html=True
@@ -39,7 +36,7 @@ def render_cart_page():
     items = cart_items()
 
     if not items:
-        st.info("Your cart is empty. Explore our organic millets, cold pressed oils, and farm staples from the home page!")
+        st.info("Thanks for shopping!")
         
         # Checkout buttons disabled state
         st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0 1.5rem 0;'>", unsafe_allow_html=True)
@@ -50,7 +47,7 @@ def render_cart_page():
                 go_to("home")
                 st.rerun()
         with btn_c2:
-            st.button("🚀 Proceed to Checkout", key="cart_checkout_disabled", disabled=True, use_container_width=True)
+            st.button("🚀 Finalize Order", key="cart_checkout_disabled", disabled=True, use_container_width=True)
         return
 
     # Total accumulator variables
@@ -153,7 +150,7 @@ def render_cart_page():
     st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0 1.5rem 0;'>", unsafe_allow_html=True)
 
     # Price Summary Section
-    st.markdown("<div style='font-family:\"Poppins\", sans-serif; font-size:1.3rem; font-weight:700; color:#1B4D3E; margin-bottom:1rem;'>Checkout Summary</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-family:\"Poppins\", sans-serif; font-size:1.3rem; font-weight:700; color:#1B4D3E; margin-bottom:1rem;'>Your Basket</div>", unsafe_allow_html=True)
 
     col_summary_details, col_final_highlight = st.columns([1.5, 1])
 
@@ -214,11 +211,30 @@ def render_cart_page():
 
     # 1 EXTRA NOTIFICATION ON SCREEN TO CONFIRM OR RETURN TO CART
     if st.session_state.get("show_confirm_dialog"):
-        # Format item list summary with units
-        item_summary_lines = "<br>".join([
-            f"• <b>{it['product'].name}</b>: {it['qty']} {getattr(it['product'], 'unit', 'kg')} @ {CURRENCY}{it['product'].price:,.2f}/{getattr(it['product'], 'unit', 'kg')}"
-            for it in items
-        ])
+        # Format item list summary with right-aligned numbers
+        item_rows = []
+        for idx, it in enumerate(items, 1):
+            p_name = it['product'].name
+            p_qty = it['qty']
+            p_unit = getattr(it['product'], 'unit', 'kg')
+            p_price = float(it['product'].price)
+            p_subtotal = p_qty * p_price
+            item_rows.append(
+                f"""
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #E2E9E3;">
+                    <div style="font-weight: 600; color: #0F291E;">
+                        {idx}. {p_name}
+                    </div>
+                    <div style="text-align: right; font-weight: 700; color: #16A34A; white-space: nowrap;">
+                        <span style="font-size: 0.85rem; color: #4A6B5D; font-weight: 500; margin-right: 8px;">
+                            {p_qty} {p_unit} × {CURRENCY}{p_price:,.2f} =
+                        </span>
+                        <span>{CURRENCY}{p_subtotal:,.2f}</span>
+                    </div>
+                </div>
+                """
+            )
+        item_summary_lines = "".join(item_rows)
         st.markdown(
             f"""
             <div style="
@@ -233,16 +249,13 @@ def render_cart_page():
             ">
                 <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🔔</div>
                 <div style="font-family: 'Poppins', sans-serif; font-size: 1.35rem; font-weight: 700; color: #1B4D3E;">
-                    Order Confirmation Prompt
+                    Order Confirmation
                 </div>
                 <div style="font-size: 0.95rem; color: #4A6B5D; margin: 0.6rem 0 0.8rem 0; line-height: 1.5;">
                     Are you sure you want to place this order for <b>{CURRENCY}{final_payable:,.2f}</b>?
                 </div>
                 <div style="font-size: 0.88rem; color: #0F291E; text-align: left; background: #F8FAF8; border: 1px solid #E2E9E3; border-radius: 12px; padding: 0.8rem 1.2rem; margin-bottom: 1rem;">
                     {item_summary_lines}
-                </div>
-                <div style="font-size: 0.82rem; color: #166534;">
-                    All items will be recorded into the <code>Order_Details</code> database table with date & time.
                 </div>
             </div>
             """,
@@ -278,6 +291,6 @@ def render_cart_page():
                 st.rerun()
 
         with btn_col2:
-            if st.button("🚀 Proceed to Checkout", key="cart_checkout_active", type="primary", use_container_width=True):
+            if st.button("🚀 Finalize Order", key="cart_checkout_active", type="primary", use_container_width=True):
                 st.session_state.show_confirm_dialog = True
                 st.rerun()

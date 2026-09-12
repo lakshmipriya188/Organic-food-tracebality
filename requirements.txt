@@ -6,3 +6,6 @@ pymysql
 lightgbm
 xgboost
 scikit-learn
+sqlalchemy 
+plotly
+altair

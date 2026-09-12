@@ -1,7 +1,7 @@
 import streamlit as st
 from config import CURRENCY, APP_NAME, APP_SUBTITLE
 from utils.cart_manager import go_to, logout_user, load_cart_from_db, load_wishlist_from_db
-from db_manager import verify_customer_login, register_customer, fetch_order_history_db
+from db_manager import verify_customer_login, register_customer, fetch_order_history_db, get_customer_by_email
 from utils.image_utils import get_image_src
 
 
@@ -29,17 +29,17 @@ def render_login_page():
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                     <div>
                         <span style="background: rgba(34, 197, 94, 0.2); color: #4ADE80; font-size: 0.75rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(74, 222, 128, 0.3); text-transform: uppercase; letter-spacing: 1px;">
-                            Verified {APP_NAME} Customer Account
+                            {"🛡️ Verified Admin Account" if st.session_state.get("is_admin") else f"Verified {APP_NAME} Customer Account"}
                         </span>
                         <h2 style="font-family:'Poppins', sans-serif; color: #FFFFFF !important; margin: 0.6rem 0 0.2rem 0; font-size: 2rem;">
                             Welcome, {user_name}!
                         </h2>
                         <p style="color: #A3B8AD; margin: 0; font-size: 0.95rem;">
-                            Registered Email ID: <b>{user_email}</b> | Customer ID: <b>#{user_id}</b>
+                            Registered Email ID: <b>{user_email}</b> | Account ID: <b>#{user_id}</b>
                         </p>
                     </div>
                     <div style="text-align:right;">
-                        <span style="font-size: 2.5rem;">🌱</span>
+                        <span style="font-size: 2.5rem;">{"🛡️" if st.session_state.get("is_admin") else "🌱"}</span>
                     </div>
                 </div>
             </div>
@@ -47,16 +47,32 @@ def render_login_page():
             unsafe_allow_html=True
         )
 
-        btn_col1, btn_col2, _ = st.columns([1.8, 1.5, 3])
-        with btn_col1:
-            if st.button("🌱 Continue to Organic Store", type="primary", use_container_width=True):
-                go_to("home")
-                st.rerun()
-        with btn_col2:
-            if st.button("🚪 Log Out", use_container_width=True):
-                logout_user()
-                st.success("Successfully logged out.")
-                st.rerun()
+        if st.session_state.get("is_admin"):
+            btn_col1, btn_col2, btn_col3, _ = st.columns([1.8, 1.8, 1.5, 1.5])
+            with btn_col1:
+                if st.button("🌱 Continue to Organic Store", type="primary", use_container_width=True):
+                    go_to("home")
+                    st.rerun()
+            with btn_col2:
+                if st.button("🛡️ Access Admin Dashboard", use_container_width=True):
+                    go_to("admin")
+                    st.rerun()
+            with btn_col3:
+                if st.button("🚪 Log Out", use_container_width=True):
+                    logout_user()
+                    st.success("Successfully logged out.")
+                    st.rerun()
+        else:
+            btn_col1, btn_col2, _ = st.columns([1.8, 1.5, 3])
+            with btn_col1:
+                if st.button("🌱 Continue to Organic Store", type="primary", use_container_width=True):
+                    go_to("home")
+                    st.rerun()
+            with btn_col2:
+                if st.button("🚪 Log Out", use_container_width=True):
+                    logout_user()
+                    st.success("Successfully logged out.")
+                    st.rerun()
 
         st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0;'>", unsafe_allow_html=True)
 
@@ -128,7 +144,7 @@ def render_login_page():
                 )
         return
 
-    # 2. PRE-LOGIN HERO & CUSTOMER PORTAL VIEW
+    # 2. PRE-LOGIN HERO & LOGIN PORTAL VIEW
     hero_left, portal_right = st.columns([1.15, 0.85], gap="large")
 
     with hero_left:
@@ -269,7 +285,7 @@ gap: 6px;
         )
 
     with portal_right:
-        # SINGLE DECENT & CLASSY CUSTOMER LOGIN CARD
+        # SINGLE CLASSY LOGIN CARD WITH ROLE SELECTION
         st.markdown(
             """
             <div style="
@@ -281,45 +297,96 @@ gap: 6px;
             ">
                 <div style="margin-bottom: 1.4rem;">
                     <div style="font-family:'Poppins', sans-serif; font-size: 1.8rem; font-weight: 800; color: #1B4D3E;">
-                        Customer Login
+                        Account Login
                     </div>
                     <div style="font-size: 0.88rem; color: #4A6B5D; margin-top: 4px;">
-                        Log in with your registered email ID to access the store & farm traceability details.
+                        Log in with your credentials to access the Farmora store or admin panel.
                     </div>
                 </div>
             """,
             unsafe_allow_html=True
         )
 
-        tab_login, tab_signup = st.tabs(["🔒 Customer Log In", "📝 Register New Customer"])
+        tab_login, tab_signup = st.tabs(["🔒 Log In", "📝 Register New Customer"])
 
         with tab_login:
             st.markdown(
-                "<p style='font-size:0.85rem; color:#64748B; margin-bottom:1rem; margin-top: 0.5rem;'>Enter your registered email ID and password to log in.</p>",
+                """
+                <style>
+                div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] button {
+                    background: linear-gradient(135deg, #0F291E 0%, #1B4D3E 60%, #16A34A 100%) !important;
+                    color: #FFFFFF !important;
+                    font-weight: 700 !important;
+                    font-size: 0.95rem !important;
+                    border: 1px solid #4ADE80 !important;
+                    box-shadow: 0 4px 15px rgba(27, 77, 62, 0.35) !important;
+                }
+                div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] button:hover {
+                    background: linear-gradient(135deg, #16A34A 0%, #22C55E 100%) !important;
+                    color: #FFFFFF !important;
+                    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.45) !important;
+                }
+                </style>
+                <p style='font-size:0.85rem; color:#64748B; margin-bottom:0.8rem; margin-top: 0.5rem;'>Enter your credentials and select your login role.</p>
+                """,
                 unsafe_allow_html=True
             )
             with st.form("login_form"):
-                email_input = st.text_input("Email ID", placeholder="Enter your email ID (e.g. rahul@gmail.com)")
+                email_input = st.text_input("Email ID / Username", placeholder="Enter your email ID or username (e.g. rahul@gmail.com)")
                 password_input = st.text_input("Password", type="password", placeholder="Enter your password")
+
+                st.markdown("<p style='font-size:0.85rem; font-weight:700; color:#1B4D3E; margin-top:0.8rem; margin-bottom:0.2rem;'>Login Role:</p>", unsafe_allow_html=True)
+                role_choice = st.radio(
+                    "Login Role Selection",
+                    ["Login as Customer", "Login as Admin"],
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="login_role_radio"
+                )
+
+                st.markdown("<div style='margin-bottom:0.6rem;'></div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("Log In & Enter Store", use_container_width=True, type="primary")
 
                 if submitted:
                     if not email_input or not password_input:
-                        st.error("Please enter both email ID and password.")
+                        st.error("Please enter both email ID/username and password.")
                     else:
-                        cust = verify_customer_login(email_input, password_input)
-                        if cust:
-                            st.session_state.user = cust["customer_name"]
-                            st.session_state.user_email = cust["email_id"]
-                            st.session_state.user_id = cust["customer_id"]
-                            st.session_state.show_ai_login_dialog = True
-                            load_cart_from_db(cust["customer_id"])
-                            load_wishlist_from_db(cust["customer_id"])
-                            st.session_state.page = "home"
-                            st.success(f"Welcome back, {cust['customer_name']}! Redirecting to store...")
-                            st.rerun()
+                        if role_choice == "Login as Customer":
+                            cust = verify_customer_login(email_input, password_input)
+                            if cust:
+                                st.session_state.user = cust["customer_name"]
+                                st.session_state.user_email = cust["email_id"]
+                                st.session_state.user_id = cust["customer_id"]
+                                st.session_state.is_admin = False
+                                st.session_state.show_ai_login_dialog = True
+                                load_cart_from_db(cust["customer_id"])
+                                load_wishlist_from_db(cust["customer_id"])
+                                st.session_state.page = "home"
+                                st.success(f"Welcome back, {cust['customer_name']}! Redirecting to store...")
+                                st.rerun()
+                            else:
+                                st.error("Invalid email ID or password. Please check your credentials and try again.")
                         else:
-                            st.error("Invalid email ID or password. Please check your credentials and try again.")
+                            # Login as Admin: User MUST exist in Customer_Details table, and password MUST be 'admin'
+                            clean_email = email_input.strip().lower()
+                            clean_pw = password_input.strip().lower()
+
+                            cust = get_customer_by_email(email_input)
+                            if not cust:
+                                st.error(f"No customer account found for '{email_input}' in Customer_Details database table. Admin user must be an existing customer.")
+                            elif clean_pw != "admin":
+                                st.error("Invalid Admin password.")
+                            else:
+                                st.session_state.user = cust["customer_name"]
+                                st.session_state.user_email = cust["email_id"]
+                                st.session_state.user_id = cust["customer_id"]
+                                st.session_state.is_admin = True
+                                st.session_state.show_ai_login_dialog = True
+                                load_cart_from_db(cust["customer_id"])
+                                load_wishlist_from_db(cust["customer_id"])
+                                st.session_state.page = "home"
+                                st.success(f"Welcome Admin {cust['customer_name']}! Admin authentication successful. Redirecting to store...")
+                                st.rerun()
 
         with tab_signup:
             st.markdown(
