@@ -237,17 +237,14 @@ def render_ml_prediction_page():
     # Top action bar
     top_col1, _ = st.columns([1.5, 4])
     with top_col1:
-        if st.button("← Back to Main Store UI", key="pred_back_top", use_container_width=True):
+        if st.button("← Back", key="pred_back_top", use_container_width=True):
             go_to("home")
             st.rerun()
 
     st.markdown(
         """
-        <div style="font-family:'Poppins', sans-serif; font-size:0.82rem; font-weight:700; color:#16A34A; letter-spacing:2px; text-transform:uppercase; margin-top:0.8rem; margin-bottom:4px;">
-            PRODUCT RECOMMENDATION ENGINE
-        </div>
-        <div style="font-family:'Poppins', sans-serif; font-size:2rem; font-weight:700; color:#1B4D3E; margin-bottom:1.5rem;">
-            🤖 Product Recommendation
+        <div style="font-family:'Poppins', sans-serif; font-size:2rem; font-weight:700; color:#1B4D3E; margin-top:0.8rem; margin-bottom:1.5rem;">
+            Product Recommendation
         </div>
         """,
         unsafe_allow_html=True
@@ -317,8 +314,8 @@ def render_ml_prediction_page():
             <div style="font-size: 1.9rem; font-weight: 800; font-family: 'Poppins', sans-serif; color: #FFFFFF; margin: 4px 0 2px 0;">
                 👤 Customer Name: {cust_info.get('customer_name', current_uname)}
             </div>
-            <div style="font-size: 0.92rem; color: #DCFCE7;">
-                📧 Email ID: <b>{cust_info.get('email_id', 'N/A')}</b>
+            <div style="font-size: 0.95rem; color: #DCFCE7; font-weight: 600;">
+                Welcome! 😊
             </div>
         </div>
         """,
@@ -346,7 +343,7 @@ def render_ml_prediction_page():
         st.info("ℹ️ No more recommendations available.")
         return
 
-    st.markdown("### 🎯 Recommended Products for You")
+    st.markdown("### Farmora Recommends Below")
 
     top_predictions = available_predictions[:3]
     cols = st.columns(len(top_predictions))
@@ -457,32 +454,62 @@ def render_ml_prediction_page():
                     st.session_state.last_rejection_msg = ""
                     st.rerun()
 
-    # Session Activity Breakdown
+    # Customer Choice Breakdown
     if st.session_state.accepted_history or st.session_state.rejected_history:
         st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0 1.5rem 0;'>", unsafe_allow_html=True)
-        st.markdown("### 📊 AI Session Activity Breakdown")
+        st.markdown("### Customer Choice")
 
-        cart_items_list = [x for x in st.session_state.accepted_history if x["action"] == "Cart"]
-        wishlist_items_list = [x for x in st.session_state.accepted_history if x["action"] == "Wishlist"]
-        rejected_items_list = st.session_state.rejected_history
+        cart_items_list = [x for x in st.session_state.accepted_history if x.get("action") == "Cart"]
+        wishlist_items_list = [x for x in st.session_state.accepted_history if x.get("action") == "Wishlist"]
+        rejected_items_list = list(st.session_state.rejected_history)
 
         if cart_items_list:
-            st.markdown("#### 🛒 Items Synced to Main Shopping Cart")
+            st.markdown("#### 🛒 Items Added to Shopping Cart")
             for item in cart_items_list:
                 st.markdown(f"- 🛒 **{item['name']}** — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
-            
+
         if wishlist_items_list:
-            st.markdown("#### ❤️ Items Synced to Main Wishlist")
-            for item in wishlist_items_list:
-                st.markdown(f"- ❤️ **{item['name']}** — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
+            st.markdown("#### ❤️ Items Added to Wishlist")
+            for idx, item in enumerate(wishlist_items_list):
+                col_text, col_act = st.columns([3.5, 1.2])
+                with col_text:
+                    st.markdown(f"- ❤️ **{item['name']}** — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
+                with col_act:
+                    if st.button("🛒 Add to Cart", key=f"wish_to_cart_{item['id']}_{idx}", use_container_width=True):
+                        prod_dataclass = get_product_by_id(str(item['id']))
+                        if prod_dataclass:
+                            add_to_cart(prod_dataclass, variant="1kg", qty=1)
+                        item["action"] = "Cart"
+                        st.session_state.last_action_msg = f"🎉 **{item['name']}** added to Shopping Cart!"
+                        st.session_state.last_rejection_msg = ""
+                        st.rerun()
 
         if rejected_items_list:
-            st.markdown("#### 🔴 Rejected Recommendations")
-            for item in rejected_items_list:
-                st.markdown(f"- ❌ **{item['name']}** — Price: **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
+            st.markdown("#### 🔴 Skipped Products")
+            for idx, item in enumerate(rejected_items_list):
+                col_text, col_act = st.columns([3.5, 1.2])
+                with col_text:
+                    st.markdown(f"- ❌ **{item['name']}** — Price: **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
+                with col_act:
+                    if st.button("❤️ Add to Wishlist", key=f"rej_to_wish_{item['id']}_{idx}", use_container_width=True):
+                        prod_dataclass = get_product_by_id(str(item['id']))
+                        if prod_dataclass:
+                            toggle_wishlist(prod_dataclass)
+                        
+                        st.session_state.rejected_history = [x for x in st.session_state.rejected_history if x["id"] != item["id"]]
+                        st.session_state.accepted_product_ids.add(item["id"])
+                        if item["id"] in st.session_state.rejected_product_ids:
+                            st.session_state.rejected_product_ids.remove(item["id"])
+                        
+                        item_copy = dict(item)
+                        item_copy["action"] = "Wishlist"
+                        st.session_state.accepted_history.append(item_copy)
+                        st.session_state.last_action_msg = f"🎉 **{item['name']}** added to Wishlist!"
+                        st.session_state.last_rejection_msg = ""
+                        st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("← Continue Shopping in Main UI", key="pred_back_bottom", use_container_width=True):
+    if st.button("← Continue Shopping", key="pred_back_bottom", use_container_width=True):
         go_to("home")
         st.rerun()
 

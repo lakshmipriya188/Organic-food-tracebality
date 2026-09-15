@@ -34,8 +34,8 @@ def render_login_page():
                         <h2 style="font-family:'Poppins', sans-serif; color: #FFFFFF !important; margin: 0.6rem 0 0.2rem 0; font-size: 2rem;">
                             Welcome, {user_name}!
                         </h2>
-                        <p style="color: #A3B8AD; margin: 0; font-size: 0.95rem;">
-                            Registered Email ID: <b>{user_email}</b> | Account ID: <b>#{user_id}</b>
+                        <p style="color: #86EFAC; margin: 0; font-size: 1.1rem; font-weight: 600;">
+                            Welcome! 😊
                         </p>
                     </div>
                     <div style="text-align:right;">
@@ -47,101 +47,90 @@ def render_login_page():
             unsafe_allow_html=True
         )
 
-        if st.session_state.get("is_admin"):
-            btn_col1, btn_col2, btn_col3, _ = st.columns([1.8, 1.8, 1.5, 1.5])
-            with btn_col1:
-                if st.button("🌱 Continue to Organic Store", type="primary", use_container_width=True):
-                    go_to("home")
-                    st.rerun()
-            with btn_col2:
-                if st.button("🛡️ Access Admin Dashboard", use_container_width=True):
-                    go_to("admin")
-                    st.rerun()
-            with btn_col3:
-                if st.button("🚪 Log Out", use_container_width=True):
-                    logout_user()
-                    st.success("Successfully logged out.")
-                    st.rerun()
-        else:
-            btn_col1, btn_col2, _ = st.columns([1.8, 1.5, 3])
-            with btn_col1:
-                if st.button("🌱 Continue to Organic Store", type="primary", use_container_width=True):
-                    go_to("home")
-                    st.rerun()
-            with btn_col2:
-                if st.button("🚪 Log Out", use_container_width=True):
-                    logout_user()
-                    st.success("Successfully logged out.")
-                    st.rerun()
+        btn_col1, btn_col2, btn_col3 = st.columns([1.8, 1.8, 1.5])
+        with btn_col1:
+            if st.button("🌱 Continue Shopping", type="primary", use_container_width=True):
+                go_to("home")
+                st.rerun()
+        with btn_col2:
+            if st.button("📜 Order History", use_container_width=True):
+                st.session_state.show_order_history = not st.session_state.get("show_order_history", False)
+                st.rerun()
+        with btn_col3:
+            if st.button("🚪 Log Out", use_container_width=True):
+                logout_user()
+                st.success("Successfully logged out.")
+                st.rerun()
 
-        st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0;'>", unsafe_allow_html=True)
+        # ORDER HISTORY SECTION FOR LOGGED-IN USERS (Shown only when requested)
+        if st.session_state.get("show_order_history"):
+            st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0;'>", unsafe_allow_html=True)
+            st.markdown(
+                """
+                <div style="font-family:'Poppins', sans-serif; font-size:1.4rem; font-weight:700; color:#1B4D3E; margin-bottom:1rem;">
+                    Your Order History 📜
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-        # ORDER HISTORY SECTION FOR LOGGED-IN USERS
-        st.markdown(
-            """
-            <div style="font-family:'Poppins', sans-serif; font-size:1.4rem; font-weight:700; color:#1B4D3E; margin-bottom:1rem;">
-                Your Order History 📜
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+            orders = []
+            if user_id and str(user_id).isdigit():
+                orders = fetch_order_history_db(int(user_id))
 
-        orders = []
-        if user_id and str(user_id).isdigit():
-            orders = fetch_order_history_db(int(user_id))
+            if not orders:
+                st.info("No past orders found in Order_Details for your account. Add items to your cart and place an order to view them here!")
+            else:
+                for order in orders:
+                    o_id = order.get("order_id")
+                    p_name = order.get("product_name", "Organic Product")
+                    p_count = order.get("product_count", 1)
+                    p_unit = order.get("unit") or "kg"
+                    p_price = float(order.get("price_after_discount") or order.get("product_price") or 0.0)
+                    unit_price = float(order.get("product_price") or 0.0)
+                    o_date = str(order.get("order_date") or "").replace("@", "").strip()
+                    o_time = str(order.get("order_time") or "").replace("@", "").strip()
+                    cat_name = order.get("category_name") or "Organic Produce"
+                    item_total = round(p_price * p_count, 2)
+                    clean_date_str = f"{o_date} {o_time}".strip()
 
-        if not orders:
-            st.info("No past orders found in Order_Details for your account. Add items to your cart and place an order to view them here!")
-        else:
-            for order in orders:
-                o_id = order.get("order_id")
-                p_name = order.get("product_name", "Organic Product")
-                p_count = order.get("product_count", 1)
-                p_unit = order.get("unit") or "kg"
-                p_price = float(order.get("price_after_discount") or order.get("product_price") or 0.0)
-                unit_price = float(order.get("product_price") or 0.0)
-                o_date = str(order.get("order_date") or "")
-                o_time = str(order.get("order_time") or "")
-                cat_name = order.get("category_name") or "Organic Produce"
-                item_total = round(p_price * p_count, 2)
-
-                st.markdown(
-                    f"""
-                    <div style="
-                        background: #FFFFFF;
-                        border: 1px solid #E2E9E3;
-                        border-radius: 16px;
-                        padding: 1.2rem;
-                        margin-bottom: 1rem;
-                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-                    ">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #F0F4F1; padding-bottom: 8px; margin-bottom: 10px;">
-                            <div>
-                                <span style="font-weight: 700; color: #1B4D3E; font-size: 1rem;">Order #{o_id}</span>
-                                <span style="color: #64748B; font-size: 0.85rem; margin-left: 12px;">📅 {o_date} at {o_time}</span>
-                            </div>
-                            <span style="background: #DCFCE7; color: #166534; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
-                                COMPLETED
-                            </span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <div style="font-weight: 700; color: #0F291E; font-size: 1.05rem;">{p_name}</div>
-                                <div style="font-size: 0.85rem; color: #4A6B5D; margin-top: 2px;">
-                                    Category: <b>{cat_name}</b> | Quantity: <b>{p_count} {p_unit}</b> | Unit Price: <b>{CURRENCY}{unit_price:,.2f}/{p_unit}</b>
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background: #FFFFFF;
+                            border: 1px solid #E2E9E3;
+                            border-radius: 16px;
+                            padding: 1.2rem;
+                            margin-bottom: 1rem;
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #F0F4F1; padding-bottom: 8px; margin-bottom: 10px;">
+                                <div>
+                                    <span style="font-weight: 700; color: #1B4D3E; font-size: 1rem;">Order #{o_id}</span>
+                                    <span style="color: #64748B; font-size: 0.85rem; margin-left: 12px;">📅 {clean_date_str}</span>
                                 </div>
+                                <span style="background: #DCFCE7; color: #166534; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
+                                    COMPLETED
+                                </span>
                             </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 0.78rem; color: #64748B;">Total Amount</div>
-                                <div style="font-family: 'Poppins', sans-serif; font-size: 1.25rem; font-weight: 800; color: #16A34A;">
-                                    {CURRENCY}{item_total:,.2f}
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <div style="font-weight: 700; color: #0F291E; font-size: 1.05rem;">{p_name}</div>
+                                    <div style="font-size: 0.85rem; color: #4A6B5D; margin-top: 2px;">
+                                        Category: <b>{cat_name}</b> | Quantity: <b>{p_count} {p_unit}</b> | Unit Price: <b>{CURRENCY}{unit_price:,.2f}/{p_unit}</b>
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 0.78rem; color: #64748B;">Total Amount</div>
+                                    <div style="font-family: 'Poppins', sans-serif; font-size: 1.25rem; font-weight: 800; color: #16A34A;">
+                                        {CURRENCY}{item_total:,.2f}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                        """,
+                        unsafe_allow_html=True
+                    )
         return
 
     # 2. PRE-LOGIN HERO & LOGIN PORTAL VIEW
@@ -384,8 +373,8 @@ gap: 6px;
                                 st.session_state.show_ai_login_dialog = True
                                 load_cart_from_db(cust["customer_id"])
                                 load_wishlist_from_db(cust["customer_id"])
-                                st.session_state.page = "home"
-                                st.success(f"Welcome Admin {cust['customer_name']}! Admin authentication successful. Redirecting to store...")
+                                st.session_state.page = "admin"
+                                st.success(f"Welcome Admin {cust['customer_name']}! Admin authentication successful. Redirecting to admin page...")
                                 st.rerun()
 
         with tab_signup:

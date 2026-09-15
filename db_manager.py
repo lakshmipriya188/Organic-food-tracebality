@@ -843,4 +843,39 @@ def fetch_order_history_db(customer_id: int) -> List[Dict[str, Any]]:
         return []
 
 
+def fetch_all_orders_db() -> List[Dict[str, Any]]:
+    """Fetch all orders from Order_Details table joined with Product & Customer_Details."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT 
+                o.order_id,
+                o.customer_id,
+                c.customer_name,
+                c.email_id,
+                o.product_id,
+                p.product_name,
+                p.unit,
+                o.product_count,
+                o.product_price,
+                o.product_discount,
+                o.price_after_discount,
+                o.order_date,
+                o.order_time
+            FROM Order_Details o
+            LEFT JOIN Product p ON o.product_id = p.product_id
+            LEFT JOIN Customer_Details c ON o.customer_id = c.customer_id
+            ORDER BY o.order_id DESC;
+        """
+        cursor.execute(query)
+        orders = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return orders
+    except Error as e:
+        print(f"MySQL error fetching all orders: {e}")
+        return []
+
+
 

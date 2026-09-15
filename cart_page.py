@@ -77,73 +77,57 @@ def render_cart_page():
         category_name = getattr(product, 'category_name', None) or product.category_slug.title()
         p_unit = getattr(product, 'unit', 'kg')
 
-        # Clean White Card Layout
-        st.markdown(
-            """
-            <div style="
-                background: #FFFFFF;
-                border: 1px solid #E2E9E3;
-                border-radius: 18px;
-                padding: 1.4rem;
-                margin-bottom: 1.2rem;
-                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-            ">
-            """,
-            unsafe_allow_html=True
-        )
+        with st.container(border=True):
+            col_img, col_details, col_qty, col_actions = st.columns([1.2, 3.8, 2.2, 1.2])
 
-        col_img, col_details, col_qty, col_actions = st.columns([1.2, 3.8, 2.2, 1.2])
+            with col_img:
+                st.markdown(
+                    f"""
+                    <img src="{img_src}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid #F0F4F1;">
+                    """,
+                    unsafe_allow_html=True
+                )
 
-        with col_img:
-            st.markdown(
-                f"""
-                <img src="{img_src}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid #F0F4F1;">
-                """,
-                unsafe_allow_html=True
-            )
+            with col_details:
+                st.markdown(f"<div style='font-family:\"Poppins\", sans-serif; font-weight:700; font-size:1.1rem; color:#0F291E; margin-bottom: 4px;'>{product.name}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:0.85rem; color:#4A6B5D; margin-bottom: 8px;'>Category: <b>{category_name}</b> | Base Unit: <b>{p_unit}</b> | Variant: <b>{item['variant']}</b></div>", unsafe_allow_html=True)
+                
+                # Normal black text on white background with measurement unit
+                st.markdown(
+                    f"""
+                    <div style="font-size:0.88rem; color:#0F291E; line-height:1.6;">
+                        <div>Price Before Discount: <b>{CURRENCY}{mrp_per_unit:,.2f}</b> / {p_unit}</div>
+                        <div>Discount (%): <b>{int(disc_pct)}%</b></div>
+                        <div>Discount Amount: <b>{CURRENCY}{disc_amt_per_unit:,.2f}</b> / {p_unit}</div>
+                        <div>Final Price (after discount): <b>{CURRENCY}{final_price_per_unit:,.2f}</b> / {p_unit}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-        with col_details:
-            st.markdown(f"<div style='font-family:\"Poppins\", sans-serif; font-weight:700; font-size:1.1rem; color:#0F291E; margin-bottom: 4px;'>{product.name}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='font-size:0.85rem; color:#4A6B5D; margin-bottom: 8px;'>Category: <b>{category_name}</b> | Base Unit: <b>{p_unit}</b> | Variant: <b>{item['variant']}</b></div>", unsafe_allow_html=True)
-            
-            # Normal black text on white background with measurement unit
-            st.markdown(
-                f"""
-                <div style="font-size:0.88rem; color:#0F291E; line-height:1.6;">
-                    <div>Price Before Discount: <b>{CURRENCY}{mrp_per_unit:,.2f}</b> / {p_unit}</div>
-                    <div>Discount (%): <b>{int(disc_pct)}%</b></div>
-                    <div>Discount Amount: <b>{CURRENCY}{disc_amt_per_unit:,.2f}</b> / {p_unit}</div>
-                    <div>Final Price (after discount): <b>{CURRENCY}{final_price_per_unit:,.2f}</b> / {p_unit}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            with col_qty:
+                st.markdown(f"<div style='font-size:0.85rem; color:#0F291E; font-weight:600; margin-bottom:6px;'>Quantity ({p_unit})</div>", unsafe_allow_html=True)
+                
+                # Plus / Minus Quantity Control Row
+                q_minus, q_val, q_plus = st.columns([1, 1.2, 1])
+                with q_minus:
+                    if st.button("➖", key=f"dec_{item['key']}", use_container_width=True):
+                        update_qty(item['key'], qty - 1, product_id=product.id)
+                        st.rerun()
+                with q_val:
+                    st.markdown(f"<div style='text-align:center; font-weight:700; font-size:1.1rem; padding-top:6px; color:#0F291E;'>{qty} {p_unit}</div>", unsafe_allow_html=True)
+                with q_plus:
+                    if st.button("➕", key=f"inc_{item['key']}", use_container_width=True):
+                        update_qty(item['key'], qty + 1, product_id=product.id)
+                        st.rerun()
 
-        with col_qty:
-            st.markdown(f"<div style='font-size:0.85rem; color:#0F291E; font-weight:600; margin-bottom:6px;'>Quantity ({p_unit})</div>", unsafe_allow_html=True)
-            
-            # Plus / Minus Quantity Control Row
-            q_minus, q_val, q_plus = st.columns([1, 1.2, 1])
-            with q_minus:
-                if st.button("➖", key=f"dec_{item['key']}", use_container_width=True):
-                    update_qty(item['key'], qty - 1, product_id=product.id)
+                st.markdown(f"<div style='font-size:0.82rem; color:#0F291E; margin-top:8px; text-align:center;'>Subtotal: <b>{CURRENCY}{item_final_total:,.2f}</b></div>", unsafe_allow_html=True)
+
+            with col_actions:
+                st.write("")
+                if st.button("🗑️ Remove", key=f"rm_{item['key']}", use_container_width=True):
+                    remove_from_cart(item['key'], product_id=product.id)
                     st.rerun()
-            with q_val:
-                st.markdown(f"<div style='text-align:center; font-weight:700; font-size:1.1rem; padding-top:6px; color:#0F291E;'>{qty} {p_unit}</div>", unsafe_allow_html=True)
-            with q_plus:
-                if st.button("➕", key=f"inc_{item['key']}", use_container_width=True):
-                    update_qty(item['key'], qty + 1, product_id=product.id)
-                    st.rerun()
-
-            st.markdown(f"<div style='font-size:0.82rem; color:#0F291E; margin-top:8px; text-align:center;'>Subtotal: <b>{CURRENCY}{item_final_total:,.2f}</b></div>", unsafe_allow_html=True)
-
-        with col_actions:
-            st.write("")
-            if st.button("🗑️ Remove", key=f"rm_{item['key']}", use_container_width=True):
-                remove_from_cart(item['key'], product_id=product.id)
-                st.rerun()
-
-        st.markdown("</div>", unsafe_allow_html=True)
 
     final_payable = max(0.0, total_mrp - total_discount)
 
@@ -209,32 +193,8 @@ def render_cart_page():
 
     st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
 
-    # 1 EXTRA NOTIFICATION ON SCREEN TO CONFIRM OR RETURN TO CART
+    # Order confirmation box
     if st.session_state.get("show_confirm_dialog"):
-        # Format item list summary with right-aligned numbers
-        item_rows = []
-        for idx, it in enumerate(items, 1):
-            p_name = it['product'].name
-            p_qty = it['qty']
-            p_unit = getattr(it['product'], 'unit', 'kg')
-            p_price = float(it['product'].price)
-            p_subtotal = p_qty * p_price
-            item_rows.append(
-                f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #E2E9E3;">
-                    <div style="font-weight: 600; color: #0F291E;">
-                        {idx}. {p_name}
-                    </div>
-                    <div style="text-align: right; font-weight: 700; color: #16A34A; white-space: nowrap;">
-                        <span style="font-size: 0.85rem; color: #4A6B5D; font-weight: 500; margin-right: 8px;">
-                            {p_qty} {p_unit} × {CURRENCY}{p_price:,.2f} =
-                        </span>
-                        <span>{CURRENCY}{p_subtotal:,.2f}</span>
-                    </div>
-                </div>
-                """
-            )
-        item_summary_lines = "".join(item_rows)
         st.markdown(
             f"""
             <div style="
@@ -251,11 +211,8 @@ def render_cart_page():
                 <div style="font-family: 'Poppins', sans-serif; font-size: 1.35rem; font-weight: 700; color: #1B4D3E;">
                     Order Confirmation
                 </div>
-                <div style="font-size: 0.95rem; color: #4A6B5D; margin: 0.6rem 0 0.8rem 0; line-height: 1.5;">
-                    Are you sure you want to place this order for <b>{CURRENCY}{final_payable:,.2f}</b>?
-                </div>
-                <div style="font-size: 0.88rem; color: #0F291E; text-align: left; background: #F8FAF8; border: 1px solid #E2E9E3; border-radius: 12px; padding: 0.8rem 1.2rem; margin-bottom: 1rem;">
-                    {item_summary_lines}
+                <div style="font-size: 1.05rem; color: #0F291E; margin: 0.8rem 0 1.2rem 0; line-height: 1.5;">
+                    Are you sure you want to place this order for <b style="color: #16A34A; font-size: 1.2rem;">{CURRENCY}{final_payable:,.2f}</b>?
                 </div>
             </div>
             """,
@@ -272,7 +229,7 @@ def render_cart_page():
                 # Clear session state cart
                 st.session_state.cart = {}
                 st.session_state.show_confirm_dialog = False
-                st.session_state.order_success_msg = f"🎉 Order placed successfully for {CURRENCY}{final_payable:,.2f}! Cart items copied to Order_Details with date & time."
+                st.session_state.order_success_msg = "🎉 Order placed successfully."
                 st.rerun()
 
         with conf_col2:

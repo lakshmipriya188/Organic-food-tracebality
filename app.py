@@ -42,6 +42,12 @@ def inject_classic_styles():
             letter-spacing: -0.3px;
         }
 
+        /* Hide Streamlit Sidebar Navigation Drawer */
+        [data-testid="stSidebarNav"],
+        section[data-testid="stSidebar"] {
+            display: none !important;
+        }
+
         /* Streamlit Top Navigation & Padding Fix */
         header[data-testid="stHeader"] {
             background-color: transparent !important;
