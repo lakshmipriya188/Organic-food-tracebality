@@ -19,12 +19,18 @@ os.makedirs(OUT_DIR, exist_ok=True)
 import pandas as pd
 from sqlalchemy import create_engine
 
-# MySQL connection
-DB_USER = "root"
-DB_PASSWORD = "root123"
-DB_HOST = "localhost"
-DB_PORT = "3306"
-DB_NAME = "farmora"
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# MySQL connection (AWS RDS Default)
+DB_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+DB_PORT = os.environ.get("MYSQL_PORT", "3306")
+DB_USER = os.environ.get("MYSQL_USER", "admin")
+DB_PASSWORD = os.environ.get("MYSQL_PASSWORD", "6Td%T%3DBg")
+DB_NAME = os.environ.get("MYSQL_DATABASE", "farmora")
 
 engine = create_engine(
     f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

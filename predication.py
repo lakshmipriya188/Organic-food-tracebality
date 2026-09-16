@@ -26,10 +26,16 @@ selected_features = [
 
 target_col = 'product_id'
 
-MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
 MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
-MYSQL_USER = os.environ.get("MYSQL_USER", "root")
-MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "root123")
+MYSQL_USER = os.environ.get("MYSQL_USER", "admin")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "6Td%T%3DBg")
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "farmora")
 
 
