@@ -11,9 +11,9 @@ from cart_page import render_cart_page
 from wishlist_page import render_wishlist_page
 from login_page import render_login_page
 from traceability_page import render_traceability_page
-from pages.store_locations_page import render_store_locations_page
-from pages.deals_page import render_deals_page
-from pages.search_page import render_search_page
+from page_components.store_locations_page import render_store_locations_page
+from page_components.deals_page import render_deals_page
+from page_components.search_page import render_search_page
 from ml_prediction_page import render_ml_prediction_page
 from admin_page import render_admin_page
 
@@ -42,10 +42,14 @@ def inject_classic_styles():
             letter-spacing: -0.3px;
         }
 
-        /* Hide Streamlit Sidebar Navigation Drawer */
+        /* Hide Streamlit Sidebar Navigation Drawer & Sidebar completely */
         [data-testid="stSidebarNav"],
-        section[data-testid="stSidebar"] {
+        [data-testid="stSidebar"],
+        section[data-testid="stSidebar"],
+        div[data-testid="stSidebarNav"],
+        ul[data-testid="stSidebarNavItems"] {
             display: none !important;
+            width: 0px !important;
         }
 
         /* Streamlit Top Navigation & Padding Fix */

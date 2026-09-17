@@ -354,7 +354,31 @@ gap: 6px;
                                 st.success(f"Welcome back, {cust['customer_name']}! Redirecting to store...")
                                 st.rerun()
                             else:
-                                st.error("Invalid email ID or password. Please check your credentials and try again.")
+                                existing_cust = get_customer_by_email(email_input)
+                                if existing_cust:
+                                    st.error("Invalid password for existing customer account. Please check your credentials and try again.")
+                                else:
+                                    # New customer logging in: save customer data to Customer_Details database table
+                                    clean_email = email_input.strip().lower()
+                                    raw_username = clean_email.split("@")[0]
+                                    derived_name = " ".join([word.capitalize() for word in raw_username.replace(".", " ").replace("_", " ").split()])
+                                    if not derived_name:
+                                        derived_name = "New Customer"
+
+                                    success, msg, new_cust = register_customer(derived_name, email_input, password_input)
+                                    if success and new_cust:
+                                        st.session_state.user = new_cust["customer_name"]
+                                        st.session_state.user_email = new_cust["email_id"]
+                                        st.session_state.user_id = new_cust["customer_id"]
+                                        st.session_state.is_admin = False
+                                        st.session_state.show_ai_login_dialog = True
+                                        load_cart_from_db(new_cust["customer_id"])
+                                        load_wishlist_from_db(new_cust["customer_id"])
+                                        st.session_state.page = "home"
+                                        st.success(f"New customer account '{new_cust['customer_name']}' created and saved to Customer_Details database table! Redirecting to store...")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Could not save customer data to database: {msg}")
                         else:
                             # Login as Admin: User MUST exist in Customer_Details table, and password MUST be 'admin'
                             clean_email = email_input.strip().lower()
@@ -401,7 +425,7 @@ gap: 6px;
                             load_cart_from_db(new_cust["customer_id"])
                             load_wishlist_from_db(new_cust["customer_id"])
                             st.session_state.page = "home"
-                            st.success(f"Account created successfully for {new_cust['customer_name']}!")
+                            st.success(f"Account created and saved to Customer_Details database table for {new_cust['customer_name']}!")
                             st.rerun()
                         else:
                             st.error(msg)

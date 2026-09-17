@@ -5,6 +5,7 @@ and manages Category and Product tables.
 """
 
 import os
+import sqlite3
 from typing import List, Dict, Any, Optional
 import mysql.connector
 from mysql.connector import Error
@@ -14,6 +15,111 @@ try:
     load_dotenv()
 except ImportError:
     pass
+
+SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "organic_food.db")
+
+
+def get_sqlite_connection():
+    """Establish and return SQLite connection."""
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_sqlite_db():
+    """Ensure SQLite organic_food.db has all required tables and seed initial data if empty."""
+    try:
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Customer_Details (
+                customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_name TEXT NOT NULL,
+                email_id TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL
+            );
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Cart (
+                cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                product_count INTEGER NOT NULL,
+                product_price REAL NOT NULL,
+                product_discount REAL NOT NULL,
+                price_after_discount REAL NOT NULL
+            );
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Wishlist (
+                wishlist_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                product_count INTEGER NOT NULL,
+                product_price REAL NOT NULL,
+                product_discount REAL NOT NULL,
+                price_after_discount REAL NOT NULL
+            );
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Order_Details (
+                order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                product_count INTEGER NOT NULL,
+                product_price REAL NOT NULL,
+                product_discount REAL NOT NULL,
+                price_after_discount REAL NOT NULL,
+                order_date TEXT NOT NULL,
+                order_time TEXT
+            );
+        """)
+
+        cursor.execute("SELECT COUNT(*) FROM Customer_Details;")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            customers_data = [
+                ("Rahul Sharma", "rahul@gmail.com", "Rahul@123"),
+                ("Priya Singh", "priya@gmail.com", "Priya@123"),
+                ("Amit Kumar", "amit@gmail.com", "Amit@123"),
+                ("Sneha Reddy", "sneha@gmail.com", "Sneha@123"),
+                ("Arjun Patel", "arjun@gmail.com", "Arjun@123"),
+            ]
+            cursor.executemany(
+                "INSERT INTO Customer_Details (customer_name, email_id, password) VALUES (?, ?, ?);",
+                customers_data
+            )
+
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"SQLite DB initialization error: {e}")
+        return False
+
+
+def _save_customer_to_sqlite(customer_name: str, email_id: str, password: str) -> bool:
+    """Helper to save customer to SQLite Customer_Details table."""
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT customer_id FROM Customer_Details WHERE LOWER(email_id) = ?;", (email_id.lower(),))
+        if not cursor.fetchone():
+            cursor.execute(
+                "INSERT INTO Customer_Details (customer_name, email_id, password) VALUES (?, ?, ?);",
+                (customer_name, email_id.lower(), password)
+            )
+            conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error saving customer to SQLite: {e}")
+        return False
 
 # MySQL Connection Configurations (AWS RDS Default)
 MYSQL_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
@@ -378,7 +484,7 @@ FALLBACK_CUSTOMERS = [
 
 
 def fetch_all_customers_db() -> List[Dict[str, Any]]:
-    """Fetch all rows from Customer_Details table, or fallback list if DB unavailable."""
+    """Fetch all rows from Customer_Details table (MySQL -> SQLite -> Fallback)."""
     try:
         conn = get_connection(include_db=True)
         cursor = conn.cursor(dictionary=True)
@@ -386,14 +492,28 @@ def fetch_all_customers_db() -> List[Dict[str, Any]]:
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
-        return rows if rows else FALLBACK_CUSTOMERS
+        if rows:
+            return rows
     except Error as e:
         print(f"Error fetching customers from MySQL DB: {e}")
-        return FALLBACK_CUSTOMERS
+
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT customer_id, customer_name, email_id, password FROM Customer_Details ORDER BY customer_id ASC;")
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        if rows:
+            return rows
+    except Exception as sqle:
+        print(f"SQLite error fetching customers: {sqle}")
+
+    return FALLBACK_CUSTOMERS
 
 
 def verify_customer_login(email_id: str, password: str) -> Optional[Dict[str, Any]]:
-    """Verify email and password against Customer_Details database table (or fallback list)."""
+    """Verify email and password against Customer_Details database table (MySQL -> SQLite -> Fallback)."""
     clean_email = email_id.strip().lower()
     try:
         conn = get_connection(include_db=True)
@@ -410,6 +530,21 @@ def verify_customer_login(email_id: str, password: str) -> Optional[Dict[str, An
     except Error as e:
         print(f"MySQL error during verify_customer_login: {e}")
 
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT customer_id, customer_name, email_id FROM Customer_Details WHERE LOWER(email_id) = ? AND password = ?;",
+            (clean_email, password)
+        )
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            return {"customer_id": user["customer_id"], "customer_name": user["customer_name"], "email_id": user["email_id"]}
+    except Exception as sqle:
+        print(f"SQLite error during verify_customer_login: {sqle}")
+
     for fc in FALLBACK_CUSTOMERS:
         if fc["email_id"].lower() == clean_email and fc["password"] == password:
             return {"customer_id": fc["customer_id"], "customer_name": fc["customer_name"], "email_id": fc["email_id"]}
@@ -417,7 +552,7 @@ def verify_customer_login(email_id: str, password: str) -> Optional[Dict[str, An
 
 
 def get_customer_by_email(email_id: str) -> Optional[Dict[str, Any]]:
-    """Fetch customer record from Customer_Details by email ID (without password check)."""
+    """Fetch customer record from Customer_Details by email ID (MySQL -> SQLite -> Fallback)."""
     clean_email = email_id.strip().lower()
     try:
         conn = get_connection(include_db=True)
@@ -434,6 +569,21 @@ def get_customer_by_email(email_id: str) -> Optional[Dict[str, Any]]:
     except Error as e:
         print(f"MySQL error during get_customer_by_email: {e}")
 
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT customer_id, customer_name, email_id, password FROM Customer_Details WHERE LOWER(email_id) = ?;",
+            (clean_email,)
+        )
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            return {"customer_id": user["customer_id"], "customer_name": user["customer_name"], "email_id": user["email_id"], "password": user["password"]}
+    except Exception as sqle:
+        print(f"SQLite error during get_customer_by_email: {sqle}")
+
     for fc in FALLBACK_CUSTOMERS:
         if fc["email_id"].lower() == clean_email:
             return fc
@@ -441,11 +591,11 @@ def get_customer_by_email(email_id: str) -> Optional[Dict[str, Any]]:
 
 
 def register_customer(customer_name: str, email_id: str, password: str) -> tuple[bool, str, Optional[Dict[str, Any]]]:
-    """Insert a new customer into Customer_Details table (and fallback list)."""
+    """Insert a new customer into Customer_Details database table (MySQL & SQLite persistent fallback)."""
     clean_email = email_id.strip().lower()
     clean_name = customer_name.strip()
 
-    # Try MySQL DB insertion
+    # 1. Try MySQL DB insertion
     try:
         conn = get_connection(include_db=True)
         cursor = conn.cursor(dictionary=True)
@@ -465,19 +615,46 @@ def register_customer(customer_name: str, email_id: str, password: str) -> tuple
         conn.close()
 
         new_cust = {"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email}
-        # Also add to fallback
+        # Sync to SQLite local DB as well
+        _save_customer_to_sqlite(clean_name, clean_email, password)
         FALLBACK_CUSTOMERS.append({"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email, "password": password})
-        return True, "Account created successfully!", new_cust
+        return True, "Account created and saved to database successfully!", new_cust
     except Error as e:
-        print(f"MySQL error during register_customer: {e}")
-        # Fallback registration
-        for fc in FALLBACK_CUSTOMERS:
-            if fc["email_id"].lower() == clean_email:
-                return False, "An account with this email address already exists.", None
-        new_id = len(FALLBACK_CUSTOMERS) + 1
+        print(f"MySQL error during register_customer: {e}. Falling back to SQLite local DB...")
+
+    # 2. SQLite local DB insertion
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT customer_id FROM Customer_Details WHERE LOWER(email_id) = ?;", (clean_email,))
+        existing = cursor.fetchone()
+        if existing:
+            conn.close()
+            return False, "An account with this email address already exists.", None
+
+        cursor.execute(
+            "INSERT INTO Customer_Details (customer_name, email_id, password) VALUES (?, ?, ?);",
+            (clean_name, clean_email, password)
+        )
+        new_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
         new_cust = {"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email}
         FALLBACK_CUSTOMERS.append({"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email, "password": password})
-        return True, "Account created successfully!", new_cust
+        return True, "Account created and saved to database successfully!", new_cust
+    except Exception as sqle:
+        print(f"SQLite error during register_customer: {sqle}")
+
+    # 3. Final Fallback to in-memory list
+    for fc in FALLBACK_CUSTOMERS:
+        if fc["email_id"].lower() == clean_email:
+            return False, "An account with this email address already exists.", None
+    new_id = len(FALLBACK_CUSTOMERS) + 1
+    new_cust = {"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email}
+    FALLBACK_CUSTOMERS.append({"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email, "password": password})
+    return True, "Account created successfully!", new_cust
 
 
 def fetch_cart_items_db(customer_id: int) -> List[Dict[str, Any]]:
