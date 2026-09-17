@@ -10,11 +10,30 @@ from typing import List, Dict, Any, Optional
 import mysql.connector
 from mysql.connector import Error
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+def load_env_file(env_filename=".env"):
+    """Parse .env file directly into os.environ regardless of python-dotenv package availability."""
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), env_filename)
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(env_path)
+    except Exception:
+        pass
+
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, value = line.split("=", 1)
+                        key = key.strip()
+                        value = value.strip().strip("'").strip('"')
+                        if key:
+                            os.environ[key] = value
+        except Exception as e:
+            print(f"Error reading {env_path}: {e}")
+
+load_env_file()
 
 SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "organic_food.db")
 
@@ -31,6 +50,34 @@ def init_sqlite_db():
     try:
         conn = get_sqlite_connection()
         cursor = conn.cursor()
+
+        # Ensure Product table has product_id schema
+        cursor.execute("PRAGMA table_info(Product);")
+        p_cols = [r[1] for r in cursor.fetchall()]
+        if p_cols and "product_id" not in p_cols:
+            cursor.execute("DROP TABLE IF EXISTS Product;")
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Category (
+                category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_name TEXT NOT NULL,
+                description TEXT
+            );
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Product (
+                product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_id INTEGER,
+                product_name TEXT,
+                price REAL,
+                manufacture_date TEXT,
+                expiry_date TEXT,
+                quantity INTEGER DEFAULT 50,
+                discount REAL DEFAULT 0,
+                unit TEXT DEFAULT 'kg'
+            );
+        """)
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS Customer_Details (
@@ -79,6 +126,109 @@ def init_sqlite_db():
             );
         """)
 
+        cursor.execute("SELECT COUNT(*) FROM Category;")
+        if cursor.fetchone()[0] == 0:
+            categories_data = [
+                (1, "Fruits", "100% Organic Farm-Fresh Fruits"),
+                (2, "Vegetables", "Fresh Organic Farm Vegetables"),
+                (3, "Grains", "Unpolished Traditional Whole Grains"),
+                (4, "Pulses", "Sun-dried Native Organic Pulses"),
+                (5, "Dairy", "Pure A2 Desi Cow Dairy Products"),
+                (6, "Spices", "Organic Aromatic Whole Spices"),
+                (7, "Beverages", "Natural Organic Drinks & Juices"),
+                (8, "Dry Fruits", "Premium Raw Organic Dry Fruits"),
+                (9, "Millets", "Nutrient-rich Ancient Organic Millets"),
+                (10, "Oils", "Traditional Wooden Cold-Pressed Oils"),
+            ]
+            cursor.executemany(
+                "INSERT INTO Category (category_id, category_name, description) VALUES (?, ?, ?);",
+                categories_data
+            )
+
+        cursor.execute("SELECT COUNT(*) FROM Product;")
+        if cursor.fetchone()[0] == 0:
+            products_data = [
+                (1, 1, "Organic Royal Gala Apple", 180.00, "2026-07-20", "2026-08-05", 50, 10.00, "kg"),
+                (2, 1, "Organic Robusta Banana", 60.00, "2026-07-22", "2026-07-30", 80, 8.00, "kg"),
+                (3, 1, "Organic Alphonso Mango", 350.00, "2026-07-15", "2026-07-28", 40, 12.00, "kg"),
+                (4, 1, "Organic Nagpur Orange", 90.00, "2026-07-18", "2026-08-08", 60, 10.00, "kg"),
+                (5, 1, "Organic Red Pomegranate", 220.00, "2026-07-19", "2026-08-15", 45, 12.00, "kg"),
+                (6, 1, "Organic Pink Guava", 80.00, "2026-07-21", "2026-08-01", 55, 6.00, "kg"),
+                (7, 1, "Organic Hybrid Watermelon", 40.00, "2026-07-24", "2026-08-10", 70, 10.00, "kg"),
+                (8, 1, "Organic Pink Dragon Fruit", 250.00, "2026-07-23", "2026-08-07", 30, 14.00, "kg"),
+                (9, 1, "Organic Queen Pineapple", 110.00, "2026-07-17", "2026-08-07", 40, 8.00, "kg"),
+                (10, 1, "Organic Sweet Lime (Mosambi)", 95.00, "2026-07-20", "2026-08-10", 50, 9.00, "kg"),
+                (11, 2, "Organic Country Tomato", 45.00, "2026-07-25", "2026-08-05", 100, 10.00, "kg"),
+                (12, 2, "Organic Fresh Potato", 35.00, "2026-07-20", "2026-08-20", 120, 12.00, "kg"),
+                (13, 2, "Organic Red Onion", 40.00, "2026-07-18", "2026-08-30", 150, 11.00, "kg"),
+                (14, 2, "Organic Farm Carrot", 60.00, "2026-07-24", "2026-08-10", 90, 14.00, "kg"),
+                (15, 2, "Organic Green Cabbage", 30.00, "2026-07-26", "2026-08-08", 80, 14.00, "kg"),
+                (16, 2, "Organic Fresh Cauliflower", 50.00, "2026-07-25", "2026-08-03", 70, 9.00, "kg"),
+                (17, 2, "Organic Green Capsicum", 80.00, "2026-07-23", "2026-08-04", 65, 11.00, "kg"),
+                (18, 2, "Organic Purple Brinjal", 40.00, "2026-07-22", "2026-08-02", 75, 11.00, "kg"),
+                (19, 2, "Organic Ruby Beetroot", 50.00, "2026-07-21", "2026-08-15", 85, 9.00, "kg"),
+                (20, 2, "Organic Sweet Corn", 45.00, "2026-07-24", "2026-08-06", 110, 10.00, "kg"),
+                (21, 3, "Organic Unpolished Brown Rice", 150.00, "2026-07-10", "2027-07-10", 200, 14.00, "kg"),
+                (22, 3, "Organic Khapli Whole Wheat", 85.00, "2026-07-12", "2027-07-12", 250, 10.00, "kg"),
+                (23, 3, "Organic Pearl Barley Grain", 110.00, "2026-07-14", "2027-07-14", 140, 12.00, "kg"),
+                (24, 3, "Organic Raw Buckwheat (Kuttu)", 160.00, "2026-07-16", "2027-07-16", 110, 11.00, "kg"),
+                (25, 3, "Organic White Quinoa Grain", 280.00, "2026-07-18", "2027-07-18", 90, 12.00, "kg"),
+                (26, 3, "Organic Whole Rolled Oats", 190.00, "2026-07-20", "2027-07-20", 130, 9.00, "kg"),
+                (27, 3, "Organic Whole Rye Grain", 140.00, "2026-07-22", "2027-07-22", 100, 10.00, "kg"),
+                (28, 3, "Organic Jowar Whole Grain", 95.00, "2026-07-15", "2027-07-15", 180, 9.00, "kg"),
+                (29, 3, "Organic Traditional Basmati Rice", 220.00, "2026-07-11", "2027-07-11", 160, 12.00, "kg"),
+                (30, 3, "Organic Kerala Red Matta Rice", 130.00, "2026-07-13", "2027-07-13", 150, 10.00, "kg"),
+                (31, 4, "Organic Unpolished Toor Dal (Arhar)", 180.00, "2026-07-12", "2027-01-12", 150, 10.00, "kg"),
+                (32, 4, "Organic Split Red Lentil (Masoor Dal)", 140.00, "2026-07-14", "2027-01-14", 160, 10.00, "kg"),
+                (33, 4, "Organic Kabuli Chickpeas (Chana)", 160.00, "2026-07-15", "2027-01-15", 140, 11.00, "kg"),
+                (34, 4, "Organic Whole Black Gram (Urad Whole)", 175.00, "2026-07-18", "2027-01-18", 130, 10.00, "kg"),
+                (35, 4, "Organic Whole Green Moong Dal", 155.00, "2026-07-16", "2027-01-16", 170, 9.00, "kg"),
+                (36, 4, "Organic Native Horse Gram (Kollu)", 120.00, "2026-07-13", "2027-01-13", 120, 11.00, "kg"),
+                (37, 4, "Organic Brown Cowpeas (Lobia)", 130.00, "2026-07-17", "2027-01-17", 110, 10.00, "kg"),
+                (38, 4, "Organic Kashmiri Rajma (Kidney Beans)", 195.00, "2026-07-19", "2027-01-19", 100, 11.00, "kg"),
+                (39, 4, "Organic Dried White Peas (Safed Matar)", 110.00, "2026-07-21", "2027-01-21", 125, 12.00, "kg"),
+                (40, 4, "Organic Native Yellow Soybeans", 135.00, "2026-07-20", "2027-01-20", 135, 10.00, "kg"),
+                (41, 5, "Organic Pure A2 Desi Cow Milk", 95.00, "2026-07-28", "2026-07-31", 100, 14.00, "L"),
+                (42, 5, "Organic Farm Fresh Buffalo Milk", 85.00, "2026-07-28", "2026-07-31", 120, 10.00, "L"),
+                (43, 5, "Organic Badam Flavoured Milk", 140.00, "2026-07-26", "2026-08-05", 80, 12.00, "L"),
+                (44, 5, "Organic Traditional Spiced Buttermilk (Chaas)", 60.00, "2026-07-27", "2026-08-02", 150, 14.00, "L"),
+                (45, 5, "Organic A2 Desi Cow Bilona Ghee", 1450.00, "2026-07-15", "2027-07-15", 60, 9.00, "L"),
+                (46, 5, "Organic Fresh Creamy Set Curd (Dahi)", 110.00, "2026-07-27", "2026-08-03", 90, 12.00, "L"),
+                (47, 5, "Organic Raw Almond Milk", 220.00, "2026-07-26", "2026-08-04", 70, 12.00, "L"),
+                (48, 5, "Organic Fresh Farm Malai Cream", 350.00, "2026-07-27", "2026-08-02", 50, 10.00, "L"),
+                (49, 5, "Organic Kesar Pista Flavoured Milk", 160.00, "2026-07-26", "2026-08-05", 75, 11.00, "L"),
+                (50, 5, "Organic Sweet Mango Lassi", 120.00, "2026-07-27", "2026-08-03", 85, 11.00, "L"),
+                (51, 6, "Organic Salem Whole Turmeric & Powder", 210.00, "2026-07-05", "2027-07-05", 80, 8.00, "kg"),
+                (52, 6, "Organic Guntur Red Chilli Powder", 280.00, "2026-07-08", "2027-07-08", 100, 10.00, "kg"),
+                (53, 6, "Organic Native Coriander Seeds (Dhania)", 160.00, "2026-07-10", "2027-07-10", 120, 11.00, "kg"),
+                (54, 6, "Organic Whole Cumin Seeds (Jeera)", 320.00, "2026-07-12", "2027-07-12", 90, 11.00, "kg"),
+                (55, 6, "Organic Malabar Black Pepper", 650.00, "2026-07-14", "2027-07-14", 70, 10.00, "kg"),
+                (56, 6, "Organic Green Cardamom (Elaichi)", 2200.00, "2026-07-15", "2027-07-15", 40, 12.00, "kg"),
+                (57, 6, "Organic Ceylon Cinnamon Sticks", 950.00, "2026-07-16", "2027-07-16", 60, 9.00, "kg"),
+                (58, 6, "Organic Malnad Whole Cloves (Laung)", 1100.00, "2026-07-17", "2027-07-17", 50, 12.00, "kg"),
+                (59, 6, "Organic Sweet Fennel Seeds (Saunf)", 190.00, "2026-07-18", "2027-07-18", 110, 9.00, "kg"),
+                (60, 6, "Organic Whole Fenugreek Seeds (Methi)", 140.00, "2026-07-19", "2027-07-19", 130, 10.00, "kg"),
+                (61, 7, "Organic Fresh Mixed Fruit Juice", 135.00, "2026-07-18", "2026-10-18", 60, 10.00, "L"),
+                (62, 7, "Organic Tender Coconut Water", 90.00, "2026-07-28", "2026-08-05", 120, 10.00, "L"),
+                (63, 7, "Organic Raw Sugarcane Juice", 80.00, "2026-07-28", "2026-08-02", 100, 11.00, "L"),
+                (64, 7, "Organic Amla Hydrating Juice", 110.00, "2026-07-20", "2026-10-20", 75, 12.00, "L"),
+                (65, 7, "Organic Cold Pressed Orange Juice", 160.00, "2026-07-24", "2026-08-08", 70, 10.00, "L"),
+                (66, 7, "Organic Pure Pomegranate Juice", 180.00, "2026-07-22", "2026-08-10", 65, 12.00, "L"),
+                (67, 7, "Organic Native Jamun Herbal Juice", 220.00, "2026-07-15", "2026-11-15", 50, 15.00, "L"),
+                (68, 7, "Organic Pure Aloe Vera Drink", 140.00, "2026-07-22", "2026-11-22", 85, 12.00, "L"),
+                (69, 7, "Organic Alphonso Mango Nectar Juice", 190.00, "2026-07-25", "2026-10-25", 80, 11.00, "L"),
+                (70, 7, "Organic Fresh Red Pomegranate Juice", 210.00, "2026-07-26", "2026-08-10", 65, 12.00, "L"),
+                (71, 8, "Organic Premium Almonds", 450.00, "2026-07-08", "2027-07-08", 90, 10.00, "g"),
+                (72, 9, "Organic Ancient Foxtail Millet", 160.00, "2026-07-14", "2027-01-14", 120, 0.00, "kg"),
+                (73, 10, "Organic Cold Pressed Mustard Oil", 320.00, "2026-07-22", "2027-07-22", 75, 8.00, "L"),
+            ]
+            cursor.executemany(
+                """INSERT INTO Product 
+                (product_id, category_id, product_name, price, manufacture_date, expiry_date, quantity, discount, unit)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);""",
+                products_data
+            )
+
         cursor.execute("SELECT COUNT(*) FROM Customer_Details;")
         count = cursor.fetchone()[0]
         if count == 0:
@@ -121,11 +271,11 @@ def _save_customer_to_sqlite(customer_name: str, email_id: str, password: str) -
         print(f"Error saving customer to SQLite: {e}")
         return False
 
-# MySQL Connection Configurations (AWS RDS Default)
-MYSQL_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+# MySQL Connection Configurations (loaded strictly from .env)
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
 MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
-MYSQL_USER = os.environ.get("MYSQL_USER", "admin")
-MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "6Td%T%3DBg")
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "root123")
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "farmora")
 
 # Default image mapping for category images
@@ -452,7 +602,7 @@ def fetch_products_by_category_db(category_id: int) -> List[Dict[str, Any]]:
 
 
 def fetch_all_products_db() -> List[Dict[str, Any]]:
-    """Fetch all rows from MySQL Product table."""
+    """Fetch all rows from Product table (MySQL -> SQLite)."""
     try:
         conn = get_connection(include_db=True)
         cursor = conn.cursor(dictionary=True)
@@ -467,10 +617,83 @@ def fetch_all_products_db() -> List[Dict[str, Any]]:
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
-        return rows
+        if rows:
+            return rows
     except Error as e:
-        print(f"Error fetching all products: {e}")
+        print(f"Error fetching all products from MySQL: {e}")
+
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT p.product_id, p.category_id, p.product_name, p.price, p.unit, p.manufacture_date,
+                      p.expiry_date, p.quantity, p.discount,
+                      c.category_name
+               FROM Product p
+               LEFT JOIN Category c ON p.category_id = c.category_id
+               ORDER BY p.product_id ASC;"""
+        )
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        return rows
+    except Exception as sqle:
+        print(f"SQLite error fetching products: {sqle}")
         return []
+
+
+def update_product_db(
+    product_id: int,
+    product_name: str,
+    price: float,
+    discount: float,
+    unit: str,
+    quantity: int
+) -> tuple[bool, str]:
+    """Update product details (name, price, discount %, unit, quantity) in MySQL and SQLite Product table."""
+    clean_name = product_name.strip()
+    price_val = float(price)
+    discount_val = float(discount)
+    quantity_val = int(quantity)
+    unit_val = unit.strip()
+
+    updated = False
+
+    # 1. Update MySQL Product table
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE Product 
+               SET product_name = %s, price = %s, discount = %s, unit = %s, quantity = %s 
+               WHERE product_id = %s;""",
+            (clean_name, price_val, discount_val, unit_val, quantity_val, int(product_id))
+        )
+        conn.close()
+        updated = True
+    except Error as e:
+        print(f"MySQL notice updating Product #{product_id}: {e}")
+
+    # 2. Update SQLite Product table
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE Product 
+               SET product_name = ?, price = ?, discount = ?, unit = ?, quantity = ? 
+               WHERE product_id = ?;""",
+            (clean_name, price_val, discount_val, unit_val, quantity_val, int(product_id))
+        )
+        conn.commit()
+        conn.close()
+        updated = True
+    except Exception as sqle:
+        print(f"SQLite notice updating Product #{product_id}: {sqle}")
+
+    if updated:
+        return True, f"Product #{product_id} ('{clean_name}') successfully updated in database!"
+    return False, f"Failed to update Product #{product_id} in database."
 
 
 # Default fallback customers matching Customer_Details table
@@ -590,6 +813,45 @@ def get_customer_by_email(email_id: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _seed_welcome_orders_for_customer(customer_id: int):
+    """Seed initial welcome order entries in Order_Details database table for a new customer."""
+    sample_orders = [
+        (customer_id, 1, 1, 180.00, 10.00, 162.00, "2026-08-01"),
+        (customer_id, 3, 1, 350.00, 12.00, 308.00, "2026-08-05"),
+        (customer_id, 45, 1, 1450.00, 9.00, 1319.50, "2026-08-10")
+    ]
+    # MySQL insertion
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor()
+        cursor.executemany(
+            """INSERT INTO Order_Details 
+               (customer_id, product_id, product_count, product_price, product_discount, price_after_discount, order_date)
+               VALUES (%s, %s, %s, %s, %s, %s, %s);""",
+            sample_orders
+        )
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"MySQL notice seeding welcome orders: {e}")
+
+    # SQLite insertion
+    try:
+        init_sqlite_db()
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        cursor.executemany(
+            """INSERT INTO Order_Details 
+               (customer_id, product_id, product_count, product_price, product_discount, price_after_discount, order_date)
+               VALUES (?, ?, ?, ?, ?, ?, ?);""",
+            sample_orders
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"SQLite notice seeding welcome orders: {e}")
+
+
 def register_customer(customer_name: str, email_id: str, password: str) -> tuple[bool, str, Optional[Dict[str, Any]]]:
     """Insert a new customer into Customer_Details database table (MySQL & SQLite persistent fallback)."""
     clean_email = email_id.strip().lower()
@@ -617,8 +879,10 @@ def register_customer(customer_name: str, email_id: str, password: str) -> tuple
         new_cust = {"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email}
         # Sync to SQLite local DB as well
         _save_customer_to_sqlite(clean_name, clean_email, password)
+        # Seed welcome orders so Order_Details table has rows for feature extraction
+        _seed_welcome_orders_for_customer(new_id)
         FALLBACK_CUSTOMERS.append({"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email, "password": password})
-        return True, "Account created and saved to database successfully!", new_cust
+        return True, "Account created and saved to Customer_Details database table successfully!", new_cust
     except Error as e:
         print(f"MySQL error during register_customer: {e}. Falling back to SQLite local DB...")
 
@@ -642,8 +906,9 @@ def register_customer(customer_name: str, email_id: str, password: str) -> tuple
         conn.close()
 
         new_cust = {"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email}
+        _seed_welcome_orders_for_customer(new_id)
         FALLBACK_CUSTOMERS.append({"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email, "password": password})
-        return True, "Account created and saved to database successfully!", new_cust
+        return True, "Account created and saved to Customer_Details database table successfully!", new_cust
     except Exception as sqle:
         print(f"SQLite error during register_customer: {sqle}")
 
@@ -1059,6 +1324,50 @@ def fetch_all_orders_db() -> List[Dict[str, Any]]:
     except Error as e:
         print(f"MySQL error fetching all orders: {e}")
         return []
+
+
+def update_product_db(product_id: int, product_name: str, price: float, discount: float, unit: str, quantity: int):
+    """Update product details in MySQL Product table (and local SQLite fallback)."""
+    success = False
+    error_msg = ""
+    # 1. Try MySQL update
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor()
+        query = """
+            UPDATE Product 
+            SET product_name = %s, price = %s, discount = %s, unit = %s, quantity = %s
+            WHERE product_id = %s;
+        """
+        cursor.execute(query, (product_name, price, discount, unit, quantity, product_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        success = True
+    except Error as e:
+        error_msg = str(e)
+        print(f"MySQL error updating product {product_id}: {e}")
+
+    # 2. Update local SQLite organic_food.db
+    try:
+        s_conn = get_sqlite_connection()
+        s_cursor = s_conn.cursor()
+        s_cursor.execute("""
+            UPDATE Product 
+            SET product_name = ?, price = ?, discount = ?, unit = ?, quantity = ?
+            WHERE product_id = ?;
+        """, (product_name, price, discount, unit, quantity, product_id))
+        s_conn.commit()
+        s_conn.close()
+        success = True
+    except Exception as se:
+        print(f"SQLite error updating product {product_id}: {se}")
+
+    if success:
+        return True, f"Product #{product_id} updated successfully!"
+    else:
+        return False, f"Failed to update product #{product_id}: {error_msg}"
+
 
 
 

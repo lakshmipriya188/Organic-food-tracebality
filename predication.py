@@ -26,16 +26,14 @@ selected_features = [
 
 target_col = 'product_id'
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from db_manager import load_env_file
 
-MYSQL_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+load_env_file()
+
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
 MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
-MYSQL_USER = os.environ.get("MYSQL_USER", "admin")
-MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "6Td%T%3DBg")
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "root123")
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "farmora")
 
 
@@ -66,20 +64,19 @@ def get_direct_db_connection():
             return None
 
 
-def fetch_customer_info_and_features(customer_id: int):
-    """Directly queries database for Customer_Details & Order_Details by customer_id."""
-    FALLBACK_CUSTOMERS = [
-        {"customer_id": 1, "customer_name": "Rahul Sharma", "email_id": "rahul@gmail.com"},
-        {"customer_id": 2, "customer_name": "Priya Singh", "email_id": "priya@gmail.com"},
-        {"customer_id": 3, "customer_name": "Amit Kumar", "email_id": "amit@gmail.com"},
-        {"customer_id": 4, "customer_name": "Sneha Reddy", "email_id": "sneha@gmail.com"},
-        {"customer_id": 5, "customer_name": "Arjun Patel", "email_id": "arjun@gmail.com"},
-    ]
+from db_manager import fetch_all_customers_db, get_sqlite_connection, init_sqlite_db
 
+
+def fetch_customer_info_and_features(customer_id: int):
+    """
+    Directly queries database for Customer_Details & Order_Details by customer_id (MySQL -> SQLite -> Registered Customers).
+    Returns (cust_info_dict, features_df, error_msg).
+    """
     conn = get_direct_db_connection()
     cust_info = None
     orders = []
 
+    # 1. Query MySQL DB
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
@@ -101,20 +98,47 @@ def fetch_customer_info_and_features(customer_id: int):
         except Exception as e:
             print(f"DB query notice: {e}")
 
+    # 2. Query SQLite DB fallback (organic_food.db)
     if not cust_info:
-        for fc in FALLBACK_CUSTOMERS:
-            if fc["customer_id"] == int(customer_id):
-                cust_info = fc
-                orders = [
-                    {"product_price": 180.0, "product_discount": 10.0, "price_after_discount": 162.0},
-                    {"product_price": 350.0, "product_discount": 12.0, "price_after_discount": 308.0},
-                    {"product_price": 95.0, "product_discount": 14.0, "price_after_discount": 81.70},
-                    {"product_price": 1450.0, "product_discount": 9.0, "price_after_discount": 1319.50},
-                ]
+        try:
+            init_sqlite_db()
+            sqlite_conn = get_sqlite_connection()
+            cursor = sqlite_conn.cursor()
+            cursor.execute(
+                "SELECT customer_id, customer_name, email_id FROM Customer_Details WHERE customer_id = ?;",
+                (int(customer_id),)
+            )
+            row = cursor.fetchone()
+            if row:
+                cust_info = {"customer_id": row["customer_id"], "customer_name": row["customer_name"], "email_id": row["email_id"]}
+                cursor.execute(
+                    "SELECT product_price, product_discount, price_after_discount FROM Order_Details WHERE customer_id = ?;",
+                    (int(customer_id),)
+                )
+                orders = [dict(r) for r in cursor.fetchall()]
+            sqlite_conn.close()
+        except Exception as sqle:
+            print(f"SQLite query notice: {sqle}")
+
+    # 3. Check all active registered customers from db_manager
+    if not cust_info:
+        all_customers = fetch_all_customers_db()
+        for c in all_customers:
+            if int(c.get("customer_id", 0)) == int(customer_id):
+                cust_info = {"customer_id": c["customer_name"], "customer_name": c["customer_name"], "email_id": c["email_id"]}
                 break
 
-    if not cust_info or not orders:
-        return None, None, "Customer is not in the current database"
+    if not cust_info:
+        return None, None, f"Customer ID {customer_id} is not in the Customer_Details database table."
+
+    # If customer is present in Customer_Details but has no past orders yet, supply baseline sample orders
+    if not orders:
+        orders = [
+            {"product_price": 180.0, "product_discount": 10.0, "price_after_discount": 162.0},
+            {"product_price": 350.0, "product_discount": 12.0, "price_after_discount": 308.0},
+            {"product_price": 95.0, "product_discount": 14.0, "price_after_discount": 81.70},
+            {"product_price": 1450.0, "product_discount": 9.0, "price_after_discount": 1319.50},
+        ]
 
     df_orders = pd.DataFrame(orders)
     pp = df_orders['product_price'].astype(float).values

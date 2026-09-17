@@ -68,45 +68,26 @@ def render_header():
             user_name = st.session_state.user.split(" ")[0] if st.session_state.user else "Log in"
             u_label = f"👤 {user_name}"
 
-            if is_admin:
-                act_col1, act_col2, act_col3, act_col4, act_col5 = st.columns(5)
-                with act_col1:
-                    if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
-                        go_to("ml_prediction")
-                        st.rerun()
-                with act_col2:
-                    if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
-                        go_to("wishlist")
-                        st.rerun()
-                with act_col3:
-                    if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
-                        go_to("cart")
-                        st.rerun()
-                with act_col4:
-                    if st.button(u_label, key="hdr_user_btn", use_container_width=True):
-                        go_to("account")
-                        st.rerun()
-                with act_col5:
-                    if st.button("🛡️ Admin", key="hdr_admin_btn", use_container_width=True):
-                        go_to("admin")
-                        st.rerun()
-            else:
-                act_col1, act_col2, act_col3, act_col4 = st.columns(4)
-                with act_col1:
-                    if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
-                        go_to("ml_prediction")
-                        st.rerun()
-                with act_col2:
-                    if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
-                        go_to("wishlist")
-                        st.rerun()
-                with act_col3:
-                    if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
-                        go_to("cart")
-                        st.rerun()
-                with act_col4:
-                    if st.button(u_label, key="hdr_user_btn", use_container_width=True):
-                        go_to("account")
-                        st.rerun()
+            act_col1, act_col2, act_col3, act_col4, act_col5 = st.columns([1.1, 1.2, 1.1, 1.8, 1.2])
+            with act_col1:
+                if st.button("📊 Admin", key="hdr_admin_btn", use_container_width=True):
+                    go_to("admin")
+                    st.rerun()
+            with act_col2:
+                if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
+                    go_to("wishlist")
+                    st.rerun()
+            with act_col3:
+                if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
+                    go_to("cart")
+                    st.rerun()
+            with act_col4:
+                if st.button("⚙️ Product Configurations", key="hdr_pconfig_btn", use_container_width=True):
+                    go_to("product_config")
+                    st.rerun()
+            with act_col5:
+                if st.button(u_label, key="hdr_user_btn", use_container_width=True):
+                    go_to("account")
+                    st.rerun()
 
     st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 0.8rem 0 1.5rem 0;'>", unsafe_allow_html=True)

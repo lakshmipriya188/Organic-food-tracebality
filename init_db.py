@@ -1,15 +1,9 @@
-import os
+from db_manager import load_env_file, init_mysql_db, fetch_all_categories_db, fetch_all_products_db, fetch_all_customers_db
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
-from db_manager import init_mysql_db, fetch_all_categories_db, fetch_all_products_db, fetch_all_customers_db
+load_env_file()
 
 def init_db():
-    db_host = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+    db_host = os.environ.get("MYSQL_HOST", "localhost")
     db_name = os.environ.get("MYSQL_DATABASE", "farmora")
     print(f"Initializing MySQL Database on {db_host} (DB: {db_name})...")
     success = init_mysql_db()

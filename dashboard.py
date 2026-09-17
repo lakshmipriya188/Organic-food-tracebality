@@ -7,7 +7,10 @@ customer directory insights, and order history tracking for the Admin Portal.
 import streamlit as st
 import pandas as pd
 from config import CURRENCY, APP_NAME
-from db_manager import fetch_all_customers_db, fetch_all_orders_db, fetch_bestsellers_db, fetch_deals_db
+from db_manager import (
+    fetch_all_customers_db, fetch_all_orders_db, fetch_bestsellers_db, fetch_deals_db,
+    fetch_all_products_db, fetch_all_categories_db, update_product_db
+)
 from products import get_products_by_category, get_all_categories
 
 
@@ -117,7 +120,7 @@ def render_dashboard():
         st.session_state.admin_active_tab = "sales"
 
     # Separate action buttons row
-    btn_c1, btn_c2, btn_c3, btn_c4, btn_c5 = st.columns(5)
+    btn_c1, btn_c2, btn_c3, btn_c4, btn_c5, btn_c6 = st.columns(6)
 
     with btn_c1:
         is_sel = st.session_state.admin_active_tab == "sales"
@@ -127,25 +130,31 @@ def render_dashboard():
 
     with btn_c2:
         is_sel = st.session_state.admin_active_tab == "products"
-        if st.button("📦 Product Catalog Data", key="btn_tab_products", type="primary" if is_sel else "secondary", use_container_width=True):
+        if st.button("📦 Product Catalog", key="btn_tab_products", type="primary" if is_sel else "secondary", use_container_width=True):
             st.session_state.admin_active_tab = "products"
             st.rerun()
 
     with btn_c3:
+        is_sel = st.session_state.admin_active_tab == "config"
+        if st.button("⚙️ Product Configurations", key="btn_tab_config", type="primary" if is_sel else "secondary", use_container_width=True):
+            st.session_state.admin_active_tab = "config"
+            st.rerun()
+
+    with btn_c4:
         is_sel = st.session_state.admin_active_tab == "customers"
         if st.button("👥 Customer Directory", key="btn_tab_customers", type="primary" if is_sel else "secondary", use_container_width=True):
             st.session_state.admin_active_tab = "customers"
             st.rerun()
 
-    with btn_c4:
+    with btn_c5:
         is_sel = st.session_state.admin_active_tab == "orders"
-        if st.button("📜 Order Transaction Log", key="btn_tab_orders", type="primary" if is_sel else "secondary", use_container_width=True):
+        if st.button("📜 Transaction Log", key="btn_tab_orders", type="primary" if is_sel else "secondary", use_container_width=True):
             st.session_state.admin_active_tab = "orders"
             st.rerun()
 
-    with btn_c5:
+    with btn_c6:
         is_sel = st.session_state.admin_active_tab == "ai"
-        if st.button("🤖 AI & Traceability Status", key="btn_tab_ai", type="primary" if is_sel else "secondary", use_container_width=True):
+        if st.button("🤖 AI Status", key="btn_tab_ai", type="primary" if is_sel else "secondary", use_container_width=True):
             st.session_state.admin_active_tab = "ai"
             st.rerun()
 
@@ -453,3 +462,106 @@ def render_dashboard():
                 """,
                 unsafe_allow_html=True
             )
+
+    # --- SECTION 6: PRODUCT CONFIGURATIONS ---
+    elif active_tab == "config":
+        st.markdown(
+            """
+            <div style="
+                background: #FFFFFF;
+                border: 1px solid #E2E9E3;
+                border-radius: 16px;
+                padding: 1.2rem 1.5rem;
+                margin-bottom: 1.5rem;
+                box-shadow: 0 4px 15px rgba(27, 77, 62, 0.05);
+            ">
+                <h3 style="font-family:'Poppins', sans-serif; color:#1B4D3E; margin:0 0 0.4rem 0;">
+                    ⚙️ Product Configurations
+                </h3>
+                <p style="color:#4A6B5D; margin:0; font-size:0.92rem;">
+                    Manage live products directly from the database. Edit product names, base prices, discount percentages, unit measures, and stock quantities separated by category.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        db_products = fetch_all_products_db()
+        db_cats = fetch_all_categories_db()
+
+        if not db_cats:
+            db_cats = [
+                {"category_id": 1, "category_name": "Fruits"},
+                {"category_id": 2, "category_name": "Vegetables"},
+                {"category_id": 3, "category_name": "Grains"},
+                {"category_id": 4, "category_name": "Pulses"},
+                {"category_id": 5, "category_name": "Dairy"},
+                {"category_id": 6, "category_name": "Spices"},
+                {"category_id": 7, "category_name": "Beverages"},
+                {"category_id": 8, "category_name": "Dry Fruits"},
+                {"category_id": 9, "category_name": "Millets"},
+                {"category_id": 10, "category_name": "Oils"},
+            ]
+
+        # Category tabs for separate category-wise configuration
+        cat_names = [c["category_name"] for c in db_cats]
+        cat_tabs = st.tabs([f"📂 {name}" for name in cat_names])
+
+        for idx, cat in enumerate(db_cats):
+            c_id = cat["category_id"]
+            c_name = cat["category_name"]
+
+            with cat_tabs[idx]:
+                cat_prods = [p for p in db_products if p.get("category_id") == c_id]
+                if not cat_prods:
+                    st.info(f"No products found in database for category '{c_name}'.")
+                    continue
+
+                st.markdown(f"<h5 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>Editing {len(cat_prods)} Products in '{c_name}'</h5>", unsafe_allow_html=True)
+                st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 0.8rem 0 1.2rem 0;'>", unsafe_allow_html=True)
+
+                for p in cat_prods:
+                    p_id = p["product_id"]
+                    curr_name = str(p.get("product_name") or "")
+                    curr_price = float(p.get("price") or 0.0)
+                    curr_disc = float(p.get("discount") or 0.0)
+                    curr_unit = str(p.get("unit") or "kg")
+                    curr_qty = int(p.get("quantity") or 50)
+                    final_p = round(curr_price * (1 - (curr_disc / 100.0)), 2)
+
+                    with st.expander(f"📦 Product #{p_id}: {curr_name} — {CURRENCY}{final_p:,.2f}/{curr_unit} ({curr_disc:.0f}% OFF)", expanded=False):
+                        with st.form(key=f"edit_prod_form_{p_id}"):
+                            ec1, ec2, ec3 = st.columns([2.5, 1.2, 1.2])
+                            with ec1:
+                                new_name = st.text_input("Product Name", value=curr_name, key=f"pname_{p_id}")
+                            with ec2:
+                                new_price = st.number_input("Base Price / MRP (₹)", value=curr_price, min_value=0.0, step=5.0, key=f"pprice_{p_id}")
+                            with ec3:
+                                new_disc = st.number_input("Discount (%)", value=curr_disc, min_value=0.0, max_value=100.0, step=1.0, key=f"pdisc_{p_id}")
+
+                            ec4, ec5, ec6 = st.columns([1.5, 1.5, 2])
+                            with ec4:
+                                new_unit = st.selectbox("Unit Measure", options=["kg", "L", "g", "pack"], index=["kg", "L", "g", "pack"].index(curr_unit) if curr_unit in ["kg", "L", "g", "pack"] else 0, key=f"punit_{p_id}")
+                            with ec5:
+                                new_qty = st.number_input("Stock Quantity", value=curr_qty, min_value=0, step=5, key=f"pqty_{p_id}")
+                            with ec6:
+                                calc_final = round(new_price * (1 - (new_disc / 100.0)), 2)
+                                st.markdown(
+                                    f"""
+                                    <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:10px; padding:0.6rem; margin-top:1.5rem; text-align:center;">
+                                        <span style="font-size:0.75rem; color:#166534; font-weight:700;">FINAL SELLING PRICE</span><br>
+                                        <span style="font-size:1.15rem; color:#16A34A; font-weight:800; font-family:'Poppins', sans-serif;">{CURRENCY}{calc_final:,.2f}</span>
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True
+                                )
+
+                            save_submitted = st.form_submit_button("💾 Save Product Changes", type="primary", use_container_width=True)
+                            if save_submitted:
+                                ok, msg = update_product_db(p_id, new_name, new_price, new_disc, new_unit, new_qty)
+                                if ok:
+                                    st.cache_data.clear()
+                                    st.success(msg)
+                                    st.rerun()
+                                else:
+                                    st.error(msg)
