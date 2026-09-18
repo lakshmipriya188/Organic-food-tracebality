@@ -17,11 +17,13 @@ def render_cart_page():
         del st.session_state["order_success_msg"]
 
     # Top action bar
-    top_col1, _ = st.columns([1.5, 4])
+    top_col1, _ = st.columns([2.0, 4])
     with top_col1:
-        if st.button("← Continue Shopping", key="cart_continue_top", use_container_width=True):
+        back_page = "admin" if st.session_state.get("is_admin") else "ml_prediction"
+        back_label = "← Back to Admin" if st.session_state.get("is_admin") else "← Back to Ask Me"
+        if st.button(back_label, key="cart_continue_top", use_container_width=True):
             st.session_state.show_confirm_dialog = False
-            go_to("home")
+            go_to(back_page)
             st.rerun()
 
     st.markdown(
@@ -42,9 +44,9 @@ def render_cart_page():
         st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0 1.5rem 0;'>", unsafe_allow_html=True)
         btn_c1, btn_c2 = st.columns([1, 1])
         with btn_c1:
-            if st.button("← Continue Shopping", key="cart_continue_empty", use_container_width=True):
+            if st.button(back_label, key="cart_continue_empty", use_container_width=True):
                 st.session_state.show_confirm_dialog = False
-                go_to("home")
+                go_to(back_page)
                 st.rerun()
         with btn_c2:
             st.button("🚀 Finalize Order", key="cart_checkout_disabled", disabled=True, use_container_width=True)

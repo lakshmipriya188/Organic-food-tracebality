@@ -11,10 +11,12 @@ from utils.image_utils import get_image_src
 
 def render_wishlist_page():
     # Top action bar
-    top_col1, _ = st.columns([1.5, 4])
+    top_col1, _ = st.columns([2.0, 4])
     with top_col1:
-        if st.button("← Continue Shopping", key="wish_continue_top", use_container_width=True):
-            go_to("home")
+        back_page = "admin" if st.session_state.get("is_admin") else "ml_prediction"
+        back_label = "← Back to Admin" if st.session_state.get("is_admin") else "← Back to Ask Me"
+        if st.button(back_label, key="wish_continue_top", use_container_width=True):
+            go_to(back_page)
             st.rerun()
 
     st.markdown(
@@ -36,8 +38,8 @@ def render_wishlist_page():
         st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 2rem 0 1.5rem 0;'>", unsafe_allow_html=True)
         btn_c1, _ = st.columns([1, 1])
         with btn_c1:
-            if st.button("← Continue Shopping", key="wish_continue_empty", use_container_width=True):
-                go_to("home")
+            if st.button(back_label, key="wish_continue_empty", use_container_width=True):
+                go_to(back_page)
                 st.rerun()
         return
 

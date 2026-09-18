@@ -8,8 +8,9 @@ from utils.image_utils import get_image_src
 def render_login_page():
     # 1. LOGGED IN STATE DISPLAY
     if st.session_state.get("user"):
-        if st.button("← Back to home"):
-            go_to("home")
+        back_page = "admin" if st.session_state.get("is_admin") else "ml_prediction"
+        if st.button("← Back", key="login_back_btn"):
+            go_to(back_page)
             st.rerun()
 
         user_name = st.session_state.get("user", "Customer")
@@ -49,8 +50,9 @@ def render_login_page():
 
         btn_col1, btn_col2, btn_col3 = st.columns([1.8, 1.8, 1.5])
         with btn_col1:
-            if st.button("🌱 Continue Shopping", type="primary", use_container_width=True):
-                go_to("home")
+            shop_btn_label = "📊 Admin Dashboard" if st.session_state.get("is_admin") else "✨ Ask Me Recommendations"
+            if st.button(shop_btn_label, type="primary", use_container_width=True):
+                go_to(back_page)
                 st.rerun()
         with btn_col2:
             if st.button("📜 Order History", use_container_width=True):
@@ -350,8 +352,8 @@ gap: 6px;
                                 st.session_state.show_ai_login_dialog = True
                                 load_cart_from_db(cust["customer_id"])
                                 load_wishlist_from_db(cust["customer_id"])
-                                st.session_state.page = "home"
-                                st.success(f"Welcome back, {cust['customer_name']}! Redirecting to store...")
+                                st.session_state.page = "ml_prediction"
+                                st.success(f"Welcome back, {cust['customer_name']}! Redirecting to Ask Me recommendations...")
                                 st.rerun()
                             else:
                                 existing_cust = get_customer_by_email(email_input)
@@ -371,11 +373,11 @@ gap: 6px;
                                         st.session_state.user_email = new_cust["email_id"]
                                         st.session_state.user_id = new_cust["customer_id"]
                                         st.session_state.is_admin = False
-                                        st.session_state.show_ai_login_dialog = True
+                                        st.session_state.show_ai_login_dialog = False
                                         load_cart_from_db(new_cust["customer_id"])
                                         load_wishlist_from_db(new_cust["customer_id"])
-                                        st.session_state.page = "home"
-                                        st.success(f"New customer account '{new_cust['customer_name']}' created and saved to Customer_Details database table! Redirecting to store...")
+                                        st.session_state.page = "ml_prediction"
+                                        st.success(f"New customer account '{new_cust['customer_name']}' created and saved to Customer_Details database table! Redirecting to Ask Me recommendations...")
                                         st.rerun()
                                     else:
                                         st.error(f"Could not save customer data to database: {msg}")
@@ -394,7 +396,7 @@ gap: 6px;
                                 st.session_state.user_email = cust["email_id"]
                                 st.session_state.user_id = cust["customer_id"]
                                 st.session_state.is_admin = True
-                                st.session_state.show_ai_login_dialog = True
+                                st.session_state.show_ai_login_dialog = False
                                 load_cart_from_db(cust["customer_id"])
                                 load_wishlist_from_db(cust["customer_id"])
                                 st.session_state.page = "admin"
@@ -421,10 +423,11 @@ gap: 6px;
                             st.session_state.user = new_cust["customer_name"]
                             st.session_state.user_email = new_cust["email_id"]
                             st.session_state.user_id = new_cust["customer_id"]
-                            st.session_state.show_ai_login_dialog = True
+                            st.session_state.is_admin = False
+                            st.session_state.show_ai_login_dialog = False
                             load_cart_from_db(new_cust["customer_id"])
                             load_wishlist_from_db(new_cust["customer_id"])
-                            st.session_state.page = "home"
+                            st.session_state.page = "ml_prediction"
                             st.success(f"Account created and saved to Customer_Details database table for {new_cust['customer_name']}!")
                             st.rerun()
                         else:

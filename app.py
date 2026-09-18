@@ -233,71 +233,32 @@ def main():
         render_footer()
         return
 
-    page = st.session_state.get("page", "home")
+    is_admin = bool(st.session_state.get("is_admin", False))
+    page = st.session_state.get("page", "ml_prediction" if not is_admin else "admin")
 
-    # Top Dialogue Box Notification Prompt on Customer Login
-    if st.session_state.get("show_ai_login_dialog", False) and page != "ml_prediction":
-        user_name = st.session_state.get("user", "Customer")
-        st.markdown(
-            f"""
-<div style="
-background: linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%);
-border: 2px solid #86EFAC;
-border-radius: 18px;
-padding: 1.4rem 1.8rem;
-margin-bottom: 1.2rem;
-box-shadow: 0 8px 24px rgba(34, 197, 94, 0.12);
-">
-<div style="font-family: 'Poppins', sans-serif; font-size: 0.78rem; font-weight: 800; color: #166534; letter-spacing: 1.5px; text-transform: uppercase;">
-🔔 AI RECOMMENDATION ALERT
-</div>
-<div style="font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 800; color: #15803D; margin: 4px 0 2px 0;">
-Welcome back, {user_name}!
-</div>
-</div>
-""",
-            unsafe_allow_html=True
-        )
-        col_dlg_btn, col_dlg_dismiss = st.columns([2.5, 1])
-        with col_dlg_btn:
-            if st.button("Recommendations", key="dlg_ai_rec_btn", type="primary", use_container_width=True):
-                st.session_state.show_ai_login_dialog = False
-                go_to("ml_prediction")
-                st.rerun()
-        with col_dlg_dismiss:
-            if st.button("✖ Dismiss", key="dlg_dismiss_btn", use_container_width=True):
-                st.session_state.show_ai_login_dialog = False
-                st.rerun()
-        st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
+    # For customer login: ONLY allow Ask Me (ml_prediction), Wishlist, Cart, and Profile (account)
+    if not is_admin:
+        if page not in ["ml_prediction", "wishlist", "cart", "account", "login"]:
+            page = "ml_prediction"
+            st.session_state.page = "ml_prediction"
 
-    if page == "home":
-        render_categories()
-        render_favourites()
-    elif page == "category":
-        render_category_page()
-    elif page == "cart":
-        render_cart_page()
+    if page == "ml_prediction":
+        render_ml_prediction_page()
     elif page == "wishlist":
         render_wishlist_page()
-    elif page == "account" or page == "login":
+    elif page == "cart":
+        render_cart_page()
+    elif page in ["account", "login"]:
         render_login_page()
-    elif page == "traceability":
-        render_traceability_page()
-    elif page == "store_locations":
-        render_store_locations_page()
-    elif page == "deals":
-        render_deals_page()
-    elif page == "search":
-        render_search_page()
-    elif page == "ml_prediction":
-        render_ml_prediction_page()
-    elif page == "admin":
+    elif page == "admin" and is_admin:
         render_admin_page()
-    elif page == "product_config":
+    elif page == "product_config" and is_admin:
         render_product_config_page()
     else:
-        render_categories()
-        render_favourites()
+        if is_admin:
+            render_admin_page()
+        else:
+            render_ml_prediction_page()
 
     render_footer()
 

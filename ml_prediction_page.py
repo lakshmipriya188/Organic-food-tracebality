@@ -260,17 +260,18 @@ def get_all_ranked_predictions(model, encoder, products_df, input_df):
 
 
 def render_ml_prediction_page():
-    # Top action bar
-    top_col1, _ = st.columns([1.5, 4])
-    with top_col1:
-        if st.button("← Back", key="pred_back_top", use_container_width=True):
-            go_to("home")
-            st.rerun()
+    # Top action bar for Admin
+    if st.session_state.get("is_admin"):
+        top_col1, _ = st.columns([1.5, 4])
+        with top_col1:
+            if st.button("← Back to Admin", key="pred_back_top", use_container_width=True):
+                go_to("admin")
+                st.rerun()
 
     st.markdown(
         """
         <div style="font-family:'Poppins', sans-serif; font-size:2rem; font-weight:700; color:#1B4D3E; margin-top:0.8rem; margin-bottom:1.5rem;">
-            Product Recommendation
+            ✨ Ask Me - Recommended Products
         </div>
         """,
         unsafe_allow_html=True
@@ -535,9 +536,10 @@ def render_ml_prediction_page():
                         st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("← Continue Shopping", key="pred_back_bottom", use_container_width=True):
-        go_to("home")
-        st.rerun()
+    if st.session_state.get("is_admin"):
+        if st.button("← Back to Admin", key="pred_back_bottom", use_container_width=True):
+            go_to("admin")
+            st.rerun()
 
 
 if __name__ == '__main__':
