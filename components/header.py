@@ -69,7 +69,7 @@ def render_header():
             u_label = f"👤 {user_name}"
 
             if is_admin:
-                act_col1, act_col2, act_col3, act_col4, act_col5 = st.columns(5)
+                act_col1, act_col2, act_col3, act_col4, act_col5, act_col6 = st.columns([1.5, 1.6, 1.5, 2.4, 1.6, 1.4])
                 with act_col1:
                     if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
                         go_to("ml_prediction")
@@ -83,10 +83,14 @@ def render_header():
                         go_to("cart")
                         st.rerun()
                 with act_col4:
+                    if st.button("⚙️ Product Configurations", key="hdr_prod_config_btn", use_container_width=True):
+                        go_to("product_config")
+                        st.rerun()
+                with act_col5:
                     if st.button(u_label, key="hdr_user_btn", use_container_width=True):
                         go_to("account")
                         st.rerun()
-                with act_col5:
+                with act_col6:
                     if st.button("🛡️ Admin", key="hdr_admin_btn", use_container_width=True):
                         go_to("admin")
                         st.rerun()

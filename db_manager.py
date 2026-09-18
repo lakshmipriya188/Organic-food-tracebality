@@ -361,6 +361,57 @@ def fetch_all_products_db() -> List[Dict[str, Any]]:
         return []
 
 
+def update_product_db(
+    product_id: int,
+    product_name: str,
+    price: float,
+    discount: float,
+    quantity: Optional[int] = None,
+    unit: Optional[str] = None,
+    manufacture_date: Optional[str] = None,
+    expiry_date: Optional[str] = None
+) -> tuple[bool, str]:
+    """Update an existing product record in the MySQL Product table."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT product_id FROM Product WHERE product_id = %s;", (int(product_id),))
+        row = cursor.fetchone()
+        if not row:
+            cursor.close()
+            conn.close()
+            return False, f"Product ID #{product_id} not found in database."
+
+        update_fields = ["product_name = %s", "price = %s", "discount = %s"]
+        params = [product_name.strip(), float(price), float(discount)]
+
+        if quantity is not None:
+            update_fields.append("quantity = %s")
+            params.append(int(quantity))
+        if unit:
+            update_fields.append("unit = %s")
+            params.append(unit.strip())
+        if manufacture_date:
+            update_fields.append("manufacture_date = %s")
+            params.append(str(manufacture_date).strip())
+        if expiry_date:
+            update_fields.append("expiry_date = %s")
+            params.append(str(expiry_date).strip())
+
+        params.append(int(product_id))
+        query = f"UPDATE Product SET {', '.join(update_fields)} WHERE product_id = %s;"
+
+        cursor.execute(query, params)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return True, "Product updated successfully!"
+    except Error as e:
+        print(f"MySQL error during update_product_db: {e}")
+        return False, f"Database update error: {e}"
+
+
 # Default fallback customers matching Customer_Details table
 FALLBACK_CUSTOMERS = [
     {"customer_id": 1, "customer_name": "Rahul Sharma", "email_id": "rahul@gmail.com", "password": "Rahul@123"},

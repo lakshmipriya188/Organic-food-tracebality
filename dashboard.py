@@ -117,7 +117,7 @@ def render_dashboard():
         st.session_state.admin_active_tab = "sales"
 
     # Separate action buttons row
-    btn_c1, btn_c2, btn_c3, btn_c4, btn_c5 = st.columns(5)
+    btn_c1, btn_c2, btn_c3, btn_c4, btn_c5, btn_c6 = st.columns(6)
 
     with btn_c1:
         is_sel = st.session_state.admin_active_tab == "sales"
@@ -145,8 +145,14 @@ def render_dashboard():
 
     with btn_c5:
         is_sel = st.session_state.admin_active_tab == "ai"
-        if st.button("🤖 AI & Traceability Status", key="btn_tab_ai", type="primary" if is_sel else "secondary", use_container_width=True):
+        if st.button("🤖 AI Status", key="btn_tab_ai", type="primary" if is_sel else "secondary", use_container_width=True):
             st.session_state.admin_active_tab = "ai"
+            st.rerun()
+
+    with btn_c6:
+        if st.button("⚙️ Product Config", key="btn_tab_prod_config", use_container_width=True):
+            from utils.cart_manager import go_to
+            go_to("product_config")
             st.rerun()
 
     st.markdown("<div style='margin-bottom: 1.2rem;'></div>", unsafe_allow_html=True)

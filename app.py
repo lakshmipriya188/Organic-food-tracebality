@@ -16,6 +16,7 @@ from pages.deals_page import render_deals_page
 from pages.search_page import render_search_page
 from ml_prediction_page import render_ml_prediction_page
 from admin_page import render_admin_page
+from product_config_page import render_product_config_page
 
 
 def inject_classic_styles():
@@ -288,6 +289,8 @@ Welcome back, {user_name}!
         render_ml_prediction_page()
     elif page == "admin":
         render_admin_page()
+    elif page == "product_config":
+        render_product_config_page()
     else:
         render_categories()
         render_favourites()
