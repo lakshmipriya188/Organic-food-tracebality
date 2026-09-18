@@ -29,10 +29,10 @@ try:
 except ImportError:
     pass
 
-MYSQL_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
 MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
-MYSQL_USER = os.environ.get("MYSQL_USER", "admin")
-MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "6Td%T%3DBg")
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "farmora")
 
 
@@ -68,12 +68,11 @@ def fetch_customer_info_and_features(customer_id: int):
     Directly queries database for Customer_Details & Order_Details by customer_id.
     Returns (cust_info_dict, features_df, error_msg).
     """
-    FALLBACK_CUSTOMERS = [
-        {"customer_id": 1, "customer_name": "Rahul Sharma", "email_id": "rahul@gmail.com"},
-        {"customer_id": 2, "customer_name": "Priya Singh", "email_id": "priya@gmail.com"},
-        {"customer_id": 3, "customer_name": "Amit Kumar", "email_id": "amit@gmail.com"},
-        {"customer_id": 4, "customer_name": "Sneha Reddy", "email_id": "sneha@gmail.com"},
-        {"customer_id": 5, "customer_name": "Arjun Patel", "email_id": "arjun@gmail.com"},
+    DEFAULT_SAMPLE_ORDERS = [
+        {"product_price": 180.0, "product_discount": 10.0, "price_after_discount": 162.0},
+        {"product_price": 350.0, "product_discount": 12.0, "price_after_discount": 308.0},
+        {"product_price": 95.0, "product_discount": 14.0, "price_after_discount": 81.70},
+        {"product_price": 1450.0, "product_discount": 9.0, "price_after_discount": 1319.50},
     ]
 
     conn = get_direct_db_connection()
@@ -96,26 +95,58 @@ def fetch_customer_info_and_features(customer_id: int):
                     (int(customer_id),)
                 )
                 orders = cursor.fetchall()
+
+                # Seed sample orders for new customer if Order_Details is empty
+                if not orders:
+                    try:
+                        sample_insert_query = """
+                            INSERT INTO Order_Details 
+                            (customer_id, product_id, product_count, product_price, product_discount, price_after_discount, order_date, order_time)
+                            VALUES (%s, %s, %s, %s, %s, %s, CURDATE(), CURTIME());
+                        """
+                        sample_items = [
+                            (int(customer_id), 1, 2, 180.0, 10.0, 162.0),
+                            (int(customer_id), 2, 1, 350.0, 12.0, 308.0),
+                            (int(customer_id), 3, 3, 95.0, 14.0, 81.70),
+                            (int(customer_id), 5, 1, 1450.0, 9.0, 1319.50),
+                        ]
+                        for item in sample_items:
+                            cursor.execute(sample_insert_query, item)
+                        conn.commit()
+
+                        cursor.execute(
+                            """SELECT product_price, product_discount, price_after_discount 
+                               FROM Order_Details WHERE customer_id = %s;""",
+                            (int(customer_id),)
+                        )
+                        orders = cursor.fetchall()
+                    except Exception as ie:
+                        print(f"Notice: {ie}")
+                        orders = DEFAULT_SAMPLE_ORDERS
+
             cursor.close()
             conn.close()
         except Exception as e:
             print(f"DB query notice: {e}")
 
-    # Fallback in-memory check
+    # Fallback to db_manager customers search
     if not cust_info:
-        for fc in FALLBACK_CUSTOMERS:
-            if fc["customer_id"] == int(customer_id):
-                cust_info = fc
-                orders = [
-                    {"product_price": 180.0, "product_discount": 10.0, "price_after_discount": 162.0},
-                    {"product_price": 350.0, "product_discount": 12.0, "price_after_discount": 308.0},
-                    {"product_price": 95.0, "product_discount": 14.0, "price_after_discount": 81.70},
-                    {"product_price": 1450.0, "product_discount": 9.0, "price_after_discount": 1319.50},
-                ]
-                break
+        try:
+            from db_manager import fetch_all_customers_db
+            all_custs = fetch_all_customers_db()
+            for c in all_custs:
+                if int(c.get("customer_id", 0)) == int(customer_id):
+                    cust_info = {"customer_id": int(c["customer_id"]), "customer_name": c["customer_name"], "email_id": c["email_id"]}
+                    orders = DEFAULT_SAMPLE_ORDERS
+                    break
+        except Exception as fe:
+            print(f"Notice: {fe}")
 
-    if not cust_info or not orders:
-        return None, None, "Customer is not in the current database"
+    if not cust_info:
+        return None, None, f"Customer ID #{customer_id} is not in the Customer_Details database table"
+
+    if not orders:
+        orders = DEFAULT_SAMPLE_ORDERS
 
     df_orders = pd.DataFrame(orders)
     pp = df_orders['product_price'].astype(float).values

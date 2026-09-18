@@ -121,11 +121,14 @@ def _save_customer_to_sqlite(customer_name: str, email_id: str, password: str) -
         print(f"Error saving customer to SQLite: {e}")
         return False
 
-# MySQL Connection Configurations (AWS RDS Default)
-MYSQL_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+# MySQL Connection Configurations (Strictly from .env)
+from dotenv import load_dotenv
+load_dotenv()
+
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
 MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
-MYSQL_USER = os.environ.get("MYSQL_USER", "admin")
-MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "6Td%T%3DBg")
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "farmora")
 
 # Default image mapping for category images
@@ -590,6 +593,35 @@ def get_customer_by_email(email_id: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _seed_customer_sample_orders(customer_id: int):
+    """Seed initial baseline sample orders in Order_Details for a new customer if none exist."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT COUNT(*) as cnt FROM Order_Details WHERE customer_id = %s;", (int(customer_id),))
+        res = cursor.fetchone()
+        count = res["cnt"] if res else 0
+        if count == 0:
+            sample_query = """
+                INSERT INTO Order_Details 
+                (customer_id, product_id, product_count, product_price, product_discount, price_after_discount, order_date, order_time)
+                VALUES (%s, %s, %s, %s, %s, %s, CURDATE(), CURTIME());
+            """
+            sample_items = [
+                (int(customer_id), 1, 2, 180.0, 10.0, 162.0),
+                (int(customer_id), 2, 1, 350.0, 12.0, 308.0),
+                (int(customer_id), 3, 3, 95.0, 14.0, 81.70),
+                (int(customer_id), 5, 1, 1450.0, 9.0, 1319.50),
+            ]
+            for item in sample_items:
+                cursor.execute(sample_query, item)
+            conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"Notice during seeding initial orders for customer {customer_id}: {e}")
+
+
 def register_customer(customer_name: str, email_id: str, password: str) -> tuple[bool, str, Optional[Dict[str, Any]]]:
     """Insert a new customer into Customer_Details database table (MySQL & SQLite persistent fallback)."""
     clean_email = email_id.strip().lower()
@@ -618,6 +650,8 @@ def register_customer(customer_name: str, email_id: str, password: str) -> tuple
         # Sync to SQLite local DB as well
         _save_customer_to_sqlite(clean_name, clean_email, password)
         FALLBACK_CUSTOMERS.append({"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email, "password": password})
+        # Seed baseline orders for prediction feature extraction
+        _seed_customer_sample_orders(new_id)
         return True, "Account created and saved to database successfully!", new_cust
     except Error as e:
         print(f"MySQL error during register_customer: {e}. Falling back to SQLite local DB...")
@@ -643,6 +677,7 @@ def register_customer(customer_name: str, email_id: str, password: str) -> tuple
 
         new_cust = {"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email}
         FALLBACK_CUSTOMERS.append({"customer_id": new_id, "customer_name": clean_name, "email_id": clean_email, "password": password})
+        _seed_customer_sample_orders(new_id)
         return True, "Account created and saved to database successfully!", new_cust
     except Exception as sqle:
         print(f"SQLite error during register_customer: {sqle}")

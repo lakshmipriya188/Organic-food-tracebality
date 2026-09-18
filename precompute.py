@@ -25,11 +25,11 @@ try:
 except ImportError:
     pass
 
-# MySQL connection (AWS RDS Default)
-DB_HOST = os.environ.get("MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+# MySQL connection (from .env)
+DB_HOST = os.environ.get("MYSQL_HOST", "localhost")
 DB_PORT = os.environ.get("MYSQL_PORT", "3306")
-DB_USER = os.environ.get("MYSQL_USER", "admin")
-DB_PASSWORD = os.environ.get("MYSQL_PASSWORD", "6Td%T%3DBg")
+DB_USER = os.environ.get("MYSQL_USER", "root")
+DB_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
 DB_NAME = os.environ.get("MYSQL_DATABASE", "farmora")
 
 engine = create_engine(

@@ -1,5 +1,8 @@
 """Main Streamlit Application for Organic Foods - Premium Organic View."""
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import streamlit as st
 from utils.cart_manager import _init_state, go_to
 from components.header import render_header
