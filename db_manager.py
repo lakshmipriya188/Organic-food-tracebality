@@ -1096,4 +1096,23 @@ def fetch_all_orders_db() -> List[Dict[str, Any]]:
         return []
 
 
+def update_product_db(product_id: int, product_name: str, category_id: int, price: float, discount: float, quantity: int) -> bool:
+    """Update a product's details in MySQL Product table."""
+    try:
+        conn = get_connection(include_db=True)
+        cursor = conn.cursor()
+        query = """
+            UPDATE Product
+            SET product_name = %s, category_id = %s, price = %s, discount = %s, quantity = %s
+            WHERE product_id = %s;
+        """
+        cursor.execute(query, (product_name, category_id, price, discount, quantity, product_id))
+        conn.close()
+        return True
+    except Error as e:
+        print(f"MySQL error updating product {product_id}: {e}")
+        return False
+
+
+
 

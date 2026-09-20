@@ -14,7 +14,7 @@ import altair as alt
 
 from config import CURRENCY, APP_NAME
 from db_manager import fetch_all_customers_db, fetch_all_orders_db, fetch_bestsellers_db, fetch_deals_db
-from products import get_products_by_category, get_all_categories
+from products import get_products_by_category, get_all_categories, find_product_icon
 
 
 PRECOMPUTED_DIR = "precomputed"
@@ -56,7 +56,6 @@ def get_all_tables():
         filepath = os.path.join(PRECOMPUTED_DIR, filename)
         tables[name] = load_precomputed(filepath)
 
-    # Sort & categorical ordering
     if "discount_bucket_summary" in tables and tables["discount_bucket_summary"] is not None:
         discount_order = ["0%", "1-5%", "6-10%", "11-20%", "21-30%", "30%+"]
         tables["discount_bucket_summary"]["discount_group"] = pd.Categorical(
@@ -115,7 +114,6 @@ def kpi_row(items):
 def render_dashboard():
     """Render the central Admin & Sales Analytics Dashboard."""
 
-    # 1. ADMIN DASHBOARD HEADER BANNER
     admin_user = st.session_state.get("user", "Admin")
 
     st.markdown(
@@ -149,7 +147,6 @@ def render_dashboard():
 
     tables = get_all_tables()
 
-    # 2. SECTION NAVIGATION BAR
     sections = [
         "📊 Overview",
         "👥 Customer Performance",
@@ -176,9 +173,6 @@ def render_dashboard():
 
     st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.2rem 0;'>", unsafe_allow_html=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 1: OVERVIEW
-    # ------------------------------------------------------------------------
     if selected_section == "📊 Overview":
         st.subheader("📊 Executive Overview")
 
@@ -220,9 +214,6 @@ def render_dashboard():
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 2: CUSTOMER PERFORMANCE
-    # ------------------------------------------------------------------------
     elif selected_section == "👥 Customer Performance":
         st.subheader("👥 Customer Performance Overview")
 
@@ -268,9 +259,6 @@ def render_dashboard():
             )
             st.altair_chart(inactive_chart, use_container_width=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 3: PRODUCT PERFORMANCE
-    # ------------------------------------------------------------------------
     elif selected_section == "🏆 Product Performance":
         st.subheader("🏆 Product Revenue & Sales Performance")
 
@@ -308,9 +296,6 @@ def render_dashboard():
             st.markdown("##### 📦 Top 10 Products Breakdown")
             st.dataframe(top_10, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 4: DAY-OF-WEEK TRENDS
-    # ------------------------------------------------------------------------
     elif selected_section == "📅 Day-of-Week Trends":
         st.subheader("📅 Sales Revenue by Day of Week")
 
@@ -352,9 +337,6 @@ def render_dashboard():
 
             st.dataframe(dow_revenue, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 5: MONTHLY REVENUE TREND
-    # ------------------------------------------------------------------------
     elif selected_section == "📈 Monthly Revenue Trend":
         st.subheader("📈 Monthly Revenue & Cumulative Growth")
 
@@ -396,9 +378,6 @@ def render_dashboard():
 
             st.dataframe(monthly_rev, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 6: DISCOUNT ANALYSIS
-    # ------------------------------------------------------------------------
     elif selected_section == "🏷️ Discount Analysis":
         st.subheader("🏷️ Discount Bucket & Margin Impact Analysis")
 
@@ -440,9 +419,6 @@ def render_dashboard():
 
             st.dataframe(disc_df, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 7: RFM SEGMENTATION
-    # ------------------------------------------------------------------------
     elif selected_section == "🎯 RFM Segmentation":
         st.subheader("🎯 RFM (Recency, Frequency, Monetary) Customer Segmentation")
 
@@ -489,9 +465,6 @@ def render_dashboard():
 
             st.dataframe(seg_sum, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 8: NEW VS RETURNING CUSTOMERS
-    # ------------------------------------------------------------------------
     elif selected_section == "🔁 New vs Returning Customers":
         st.subheader("🔁 New vs Returning Customer Analysis")
 
@@ -536,9 +509,6 @@ def render_dashboard():
 
             st.dataframe(cust_type, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 9: ORDER FREQUENCY BUCKETS
-    # ------------------------------------------------------------------------
     elif selected_section == "🧮 Order Frequency Buckets":
         st.subheader("🧮 Order Count Frequency Distribution")
 
@@ -577,9 +547,6 @@ def render_dashboard():
 
             st.dataframe(ord_bucket, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------------
-    # SECTION 10: LIVE ADMIN OPERATIONS
-    # ------------------------------------------------------------------------
     elif selected_section == "⚙️ Live Admin Operations":
         st.subheader("⚙️ Live Database Operations & Catalog Directory")
 

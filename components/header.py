@@ -69,7 +69,7 @@ def render_header():
             u_label = f"👤 {user_name}"
             d_label = "🛡️ Dashboard" if is_admin else "📊 Dashboard"
 
-            act_col1, act_col2, act_col3, act_col4, act_col5 = st.columns(5)
+            act_col1, act_col2, act_col3, act_col4, act_col5, act_col6 = st.columns(6)
             with act_col1:
                 if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
                     go_to("ml_prediction")
@@ -79,14 +79,18 @@ def render_header():
                     go_to("dashboard")
                     st.rerun()
             with act_col3:
+                if st.button("⚙️ Product Config", key="hdr_prod_config_btn", use_container_width=True):
+                    go_to("product_config")
+                    st.rerun()
+            with act_col4:
                 if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
                     go_to("wishlist")
                     st.rerun()
-            with act_col4:
+            with act_col5:
                 if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
                     go_to("cart")
                     st.rerun()
-            with act_col5:
+            with act_col6:
                 if st.button(u_label, key="hdr_user_btn", use_container_width=True):
                     go_to("account")
                     st.rerun()
