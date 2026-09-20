@@ -295,8 +295,14 @@ Welcome back, {user_name}!
     elif page == "ml_prediction":
         render_ml_prediction_page()
     elif page == "admin" or page == "dashboard":
+        if not st.session_state.get("is_admin"):
+            st.session_state.page = "home"
+            st.rerun()
         render_admin_page()
-    elif page == "product_config":
+    elif page == "product" or page == "product_config":
+        if not st.session_state.get("is_admin"):
+            st.session_state.page = "home"
+            st.rerun()
         render_product_config_page()
     else:
         render_categories()

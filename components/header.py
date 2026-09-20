@@ -67,32 +67,52 @@ def render_header():
             c_label = f"🛒 Cart ({c_count})" if c_count > 0 else "🛒 Cart"
             user_name = st.session_state.user.split(" ")[0] if st.session_state.user else "Log in"
             u_label = f"👤 {user_name}"
-            d_label = "🛡️ Dashboard" if is_admin else "📊 Dashboard"
 
-            act_col1, act_col2, act_col3, act_col4, act_col5, act_col6 = st.columns(6)
-            with act_col1:
-                if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
-                    go_to("ml_prediction")
-                    st.rerun()
-            with act_col2:
-                if st.button(d_label, key="hdr_dash_btn", use_container_width=True):
-                    go_to("dashboard")
-                    st.rerun()
-            with act_col3:
-                if st.button("⚙️ Product Config", key="hdr_prod_config_btn", use_container_width=True):
-                    go_to("product_config")
-                    st.rerun()
-            with act_col4:
-                if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
-                    go_to("wishlist")
-                    st.rerun()
-            with act_col5:
-                if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
-                    go_to("cart")
-                    st.rerun()
-            with act_col6:
-                if st.button(u_label, key="hdr_user_btn", use_container_width=True):
-                    go_to("account")
-                    st.rerun()
+            if is_admin:
+                # Admin Header Navigation Bar: 6 Actions
+                act_col1, act_col2, act_col3, act_col4, act_col5, act_col6 = st.columns(6)
+                with act_col1:
+                    if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
+                        go_to("ml_prediction")
+                        st.rerun()
+                with act_col2:
+                    if st.button("📊 Dashboard", key="hdr_dash_btn", use_container_width=True):
+                        go_to("dashboard")
+                        st.rerun()
+                with act_col3:
+                    if st.button("📦 Product", key="hdr_prod_btn", use_container_width=True):
+                        go_to("product")
+                        st.rerun()
+                with act_col4:
+                    if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
+                        go_to("wishlist")
+                        st.rerun()
+                with act_col5:
+                    if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
+                        go_to("cart")
+                        st.rerun()
+                with act_col6:
+                    if st.button(u_label, key="hdr_user_btn", use_container_width=True):
+                        go_to("account")
+                        st.rerun()
+            else:
+                # Customer Header Navigation Bar: 4 Actions (Dashboard & Product hidden)
+                act_col1, act_col2, act_col3, act_col4 = st.columns(4)
+                with act_col1:
+                    if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
+                        go_to("ml_prediction")
+                        st.rerun()
+                with act_col2:
+                    if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
+                        go_to("wishlist")
+                        st.rerun()
+                with act_col3:
+                    if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
+                        go_to("cart")
+                        st.rerun()
+                with act_col4:
+                    if st.button(u_label, key="hdr_user_btn", use_container_width=True):
+                        go_to("account")
+                        st.rerun()
 
     st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 0.8rem 0 1.5rem 0;'>", unsafe_allow_html=True)
