@@ -293,7 +293,7 @@ Welcome back, {user_name}!
         render_search_page()
     elif page == "ml_prediction":
         render_ml_prediction_page()
-    elif page == "admin":
+    elif page == "admin" or page == "dashboard":
         render_admin_page()
     else:
         render_categories()

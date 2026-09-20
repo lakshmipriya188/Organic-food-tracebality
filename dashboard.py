@@ -1,18 +1,119 @@
-"""Admin Dashboard Component for Organic Food Traceability.
+"""Central Analytics & Admin Dashboard for Organic Food Traceability.
 
-Provides real-time business analytics, interactive visual charts, product catalog management,
-customer directory insights, and order history tracking for the Admin Portal.
+Integrates complete Sales Analytics (Plotly/Altair charts, RFM segmentation,
+customer performance, product analysis, discount buckets, monthly trends)
+from precomputed analytics with real-time MySQL database operations.
 """
 
+import os
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import altair as alt
+
 from config import CURRENCY, APP_NAME
 from db_manager import fetch_all_customers_db, fetch_all_orders_db, fetch_bestsellers_db, fetch_deals_db
 from products import get_products_by_category, get_all_categories
 
 
+PRECOMPUTED_DIR = "precomputed"
+CHART_TEMPLATE = "plotly_white"
+
+FILES = {
+    "kpis": "kpis.csv",
+    "top_10_products": "top_10_products.csv",
+    "product_summary": "product_summary.csv",
+    "dow_revenue": "dow_revenue.csv",
+    "monthly_revenue": "monthly_revenue.csv",
+    "discount_bucket_summary": "discount_bucket_summary.csv",
+    "rfm": "rfm.csv",
+    "segment_summary": "segment_summary.csv",
+    "customer_type_summary": "customer_type_summary.csv",
+    "order_bucket_distribution": "order_bucket_distribution.csv",
+    "customer_summary": "customer_summary.csv",
+    "top_customers": "top_10_customers.csv",
+    "inactive_days_summary": "inactive_days_summary.csv",
+    "active_days_summary": "active_days_summary.csv",
+}
+
+
+@st.cache_data
+def load_precomputed(path):
+    """Load a precomputed CSV file safely."""
+    if os.path.exists(path):
+        return pd.read_csv(path)
+    return None
+
+
+def get_all_tables():
+    """Load precomputed CSV summary tables."""
+    tables = {}
+    if not os.path.isdir(PRECOMPUTED_DIR):
+        return tables
+
+    for name, filename in FILES.items():
+        filepath = os.path.join(PRECOMPUTED_DIR, filename)
+        tables[name] = load_precomputed(filepath)
+
+    # Sort & categorical ordering
+    if "discount_bucket_summary" in tables and tables["discount_bucket_summary"] is not None:
+        discount_order = ["0%", "1-5%", "6-10%", "11-20%", "21-30%", "30%+"]
+        tables["discount_bucket_summary"]["discount_group"] = pd.Categorical(
+            tables["discount_bucket_summary"]["discount_group"],
+            categories=discount_order,
+            ordered=True
+        )
+        tables["discount_bucket_summary"] = tables["discount_bucket_summary"].sort_values("discount_group")
+
+    if "order_bucket_distribution" in tables and tables["order_bucket_distribution"] is not None:
+        order_bucket_order = ["1 (one-time)", "2", "3-5", "6-10", "10+"]
+        tables["order_bucket_distribution"]["order_bucket"] = pd.Categorical(
+            tables["order_bucket_distribution"]["order_bucket"],
+            categories=order_bucket_order,
+            ordered=True
+        )
+        tables["order_bucket_distribution"] = tables["order_bucket_distribution"].sort_values("order_bucket")
+
+    if "dow_revenue" in tables and tables["dow_revenue"] is not None:
+        dow_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        tables["dow_revenue"]["day_of_week"] = pd.Categorical(
+            tables["dow_revenue"]["day_of_week"],
+            categories=dow_order,
+            ordered=True
+        )
+        tables["dow_revenue"] = tables["dow_revenue"].sort_values("day_of_week")
+
+    if "inactive_days_summary" in tables and tables["inactive_days_summary"] is not None:
+        inactive_order = ["0 days", "1-3 days", "4-7 days", "8-30 days", "31-90 days", "90+ days"]
+        tables["inactive_days_summary"]["inactive_days_group"] = pd.Categorical(
+            tables["inactive_days_summary"]["inactive_days_group"],
+            categories=inactive_order,
+            ordered=True
+        )
+        tables["inactive_days_summary"] = tables["inactive_days_summary"].sort_values("inactive_days_group")
+
+    if "active_days_summary" in tables and tables["active_days_summary"] is not None:
+        active_order = ["1-3 days", "4-7 days", "8-30 days"]
+        tables["active_days_summary"]["active_days_group"] = pd.Categorical(
+            tables["active_days_summary"]["active_days_group"],
+            categories=active_order,
+            ordered=True
+        )
+        tables["active_days_summary"] = tables["active_days_summary"].sort_values("active_days_group")
+
+    return tables
+
+
+def kpi_row(items):
+    """Display multiple KPI metrics in a single row."""
+    columns = st.columns(len(items))
+    for column, (label, value) in zip(columns, items):
+        column.metric(label, value)
+
+
 def render_dashboard():
-    """Render the central Admin Dashboard for the Admin Portal."""
+    """Render the central Admin & Sales Analytics Dashboard."""
 
     # 1. ADMIN DASHBOARD HEADER BANNER
     admin_user = st.session_state.get("user", "Admin")
@@ -22,23 +123,23 @@ def render_dashboard():
         <div style="
             background: linear-gradient(135deg, #0F291E 0%, #1B4D3E 50%, #16A34A 100%);
             border-radius: 20px;
-            padding: 2rem 2.2rem;
+            padding: 1.8rem 2.2rem;
             color: #FFFFFF;
             box-shadow: 0 15px 35px rgba(27, 77, 62, 0.22);
             border: 1px solid rgba(134, 239, 172, 0.3);
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         ">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.2rem;">
                 <div>
-                    <h1 style="font-family:'Poppins', sans-serif; color: #FFFFFF !important; margin: 0 0 0.4rem 0; font-size: 2.3rem; font-weight: 800; letter-spacing: -0.5px;">
-                        Admin Operations
+                    <h1 style="font-family:'Poppins', sans-serif; color: #FFFFFF !important; margin: 0 0 0.3rem 0; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.5px;">
+                        Sales Analytics & Business Intelligence Dashboard
                     </h1>
-                    <div style="font-family:'Poppins', sans-serif; color: #86EFAC; font-size: 1.15rem; font-weight: 700;">
-                        Welcome! 😊
+                    <div style="font-family:'Poppins', sans-serif; color: #86EFAC; font-size: 1.05rem; font-weight: 700;">
+                        Welcome back, {admin_user}! 😊
                     </div>
                 </div>
                 <div style="text-align:right;">
-                    <span style="font-size: 3.2rem;">⚙️</span>
+                    <span style="font-size: 3rem;">📊</span>
                 </div>
             </div>
         </div>
@@ -46,410 +147,493 @@ def render_dashboard():
         unsafe_allow_html=True
     )
 
-    # 2. FETCH REAL-TIME DATA FROM DATABASE & CATALOG
-    products = get_products_by_category("all")
-    categories = get_all_categories()
-    customers = fetch_all_customers_db()
-    all_orders = fetch_all_orders_db()
+    tables = get_all_tables()
 
-    cat_map = {c.category_id: c.name for c in categories}
+    # 2. SECTION NAVIGATION BAR
+    sections = [
+        "📊 Overview",
+        "👥 Customer Performance",
+        "🏆 Product Performance",
+        "📅 Day-of-Week Trends",
+        "📈 Monthly Revenue Trend",
+        "🏷️ Discount Analysis",
+        "🎯 RFM Segmentation",
+        "🔁 New vs Returning Customers",
+        "🧮 Order Frequency Buckets",
+        "⚙️ Live Admin Operations"
+    ]
 
-    # Data aggregates
-    total_products_cnt = len(products)
-    total_cats_cnt = len(categories)
-    total_cust_cnt = len(customers)
-    total_orders_cnt = len(all_orders)
+    if "dash_active_section" not in st.session_state:
+        st.session_state.dash_active_section = "📊 Overview"
 
-    total_revenue = 0.0
-    for o in all_orders:
-        p_cnt = o.get("product_count", 1)
-        p_price = float(o.get("price_after_discount") or o.get("product_price") or 0.0)
-        total_revenue += p_cnt * p_price
-
-    # 3. TOP KEY METRICS CARDS
-    st.markdown("<div style='margin-bottom: 0.5rem;'></div>", unsafe_allow_html=True)
-    col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
-
-    with col_m1:
-        st.metric(
-            label="🛍️ Catalog Products",
-            value=f"{total_products_cnt}",
-            delta="100% Organic"
-        )
-    with col_m2:
-        st.metric(
-            label="📂 Categories",
-            value=f"{total_cats_cnt}",
-            delta="Farm Harvest"
-        )
-    with col_m3:
-        st.metric(
-            label="👥 Customers",
-            value=f"{total_cust_cnt}",
-            delta="Customer_Details"
-        )
-    with col_m4:
-        st.metric(
-            label="📜 Total Orders",
-            value=f"{total_orders_cnt}",
-            delta="Order_Details"
-        )
-    with col_m5:
-        st.metric(
-            label="💰 Gross Revenue",
-            value=f"{CURRENCY}{total_revenue:,.2f}",
-            delta="Completed Sales"
-        )
-
-    st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.8rem 0 1.5rem 0;'>", unsafe_allow_html=True)
-
-    # 4. DASHBOARD SECTION WITH SEPARATE BUTTONS
-    st.markdown(
-        """
-        <div style="font-family:'Poppins', sans-serif; font-size:1.6rem; font-weight:800; color:#1B4D3E; margin: 0.5rem 0 1rem 0;">
-            Dashboard
-        </div>
-        """,
-        unsafe_allow_html=True
+    selected_section = st.selectbox(
+        "Select Dashboard Section",
+        sections,
+        index=sections.index(st.session_state.dash_active_section) if st.session_state.dash_active_section in sections else 0,
+        key="dash_section_select"
     )
+    st.session_state.dash_active_section = selected_section
 
-    if "admin_active_tab" not in st.session_state:
-        st.session_state.admin_active_tab = "sales"
+    st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.2rem 0;'>", unsafe_allow_html=True)
 
-    # Separate action buttons row
-    btn_c1, btn_c2, btn_c3, btn_c4, btn_c5 = st.columns(5)
+    # ------------------------------------------------------------------------
+    # SECTION 1: OVERVIEW
+    # ------------------------------------------------------------------------
+    if selected_section == "📊 Overview":
+        st.subheader("📊 Executive Overview")
 
-    with btn_c1:
-        is_sel = st.session_state.admin_active_tab == "sales"
-        if st.button("📊 Sales & Bestsellers", key="btn_tab_sales", type="primary" if is_sel else "secondary", use_container_width=True):
-            st.session_state.admin_active_tab = "sales"
-            st.rerun()
+        if "kpis" in tables and tables["kpis"] is not None and not tables["kpis"].empty:
+            kpi = tables["kpis"].iloc[0]
+            kpi_row([
+                ("Total Revenue", f"₹{kpi['total_revenue']:,.0f}"),
+                ("Total Orders", f"{int(kpi['total_orders']):,}"),
+                ("Unique Customers", f"{int(kpi['unique_customers']):,}"),
+                ("Unique Products", f"{int(kpi['unique_products']):,}"),
+                ("Avg Order Value", f"₹{kpi['avg_order_value']:,.2f}"),
+            ])
+            st.divider()
 
-    with btn_c2:
-        is_sel = st.session_state.admin_active_tab == "products"
-        if st.button("📦 Product Catalog Data", key="btn_tab_products", type="primary" if is_sel else "secondary", use_container_width=True):
-            st.session_state.admin_active_tab = "products"
-            st.rerun()
+        col1, col2 = st.columns(2)
 
-    with btn_c3:
-        is_sel = st.session_state.admin_active_tab == "customers"
-        if st.button("👥 Customer Directory", key="btn_tab_customers", type="primary" if is_sel else "secondary", use_container_width=True):
-            st.session_state.admin_active_tab = "customers"
-            st.rerun()
+        with col1:
+            if "monthly_revenue" in tables and tables["monthly_revenue"] is not None:
+                fig = px.line(
+                    tables["monthly_revenue"],
+                    x="month",
+                    y="total_revenue",
+                    markers=True,
+                    title="Monthly Revenue Trend",
+                    template=CHART_TEMPLATE,
+                )
+                fig.update_layout(xaxis_title="Month", yaxis_title="Revenue (₹)")
+                st.plotly_chart(fig, use_container_width=True)
 
-    with btn_c4:
-        is_sel = st.session_state.admin_active_tab == "orders"
-        if st.button("📜 Order Transaction Log", key="btn_tab_orders", type="primary" if is_sel else "secondary", use_container_width=True):
-            st.session_state.admin_active_tab = "orders"
-            st.rerun()
+        with col2:
+            if "customer_type_summary" in tables and tables["customer_type_summary"] is not None:
+                fig = px.pie(
+                    tables["customer_type_summary"],
+                    names="customer_type",
+                    values="total_revenue",
+                    title="Revenue Split: New vs Returning Customers",
+                    hole=0.45,
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-    with btn_c5:
-        is_sel = st.session_state.admin_active_tab == "ai"
-        if st.button("🤖 AI & Traceability Status", key="btn_tab_ai", type="primary" if is_sel else "secondary", use_container_width=True):
-            st.session_state.admin_active_tab = "ai"
-            st.rerun()
+    # ------------------------------------------------------------------------
+    # SECTION 2: CUSTOMER PERFORMANCE
+    # ------------------------------------------------------------------------
+    elif selected_section == "👥 Customer Performance":
+        st.subheader("👥 Customer Performance Overview")
 
-    st.markdown("<div style='margin-bottom: 1.2rem;'></div>", unsafe_allow_html=True)
+        if "customer_summary" in tables and tables["customer_summary"] is not None:
+            c_df = tables["customer_summary"]
+            tot_cust = c_df["customer_id"].nunique()
+            act_cust = c_df["status"].eq("Active").sum()
+            inact_cust = c_df["status"].eq("Inactive").sum()
+            tot_rev = c_df["total_revenue"].sum()
+            avg_val = c_df["total_revenue"].mean()
+            avg_aov = c_df["avg_order_value"].mean()
+            tot_ord = c_df["total_orders"].sum()
 
-    active_tab = st.session_state.admin_active_tab
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Total Customers", f"{tot_cust:,}")
+            c2.metric("Active Customers", f"{act_cust:,}")
+            c3.metric("Inactive Customers", f"{inact_cust:,}")
+            c4.metric("Total Revenue", f"₹{tot_rev:,.0f}")
 
-    # --- SECTION 1: SALES & BESTSELLERS ---
-    if active_tab == "sales":
-        st.markdown("<h4 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>📊 Sales & Bestsellers Analytics</h4>", unsafe_allow_html=True)
-        
-        # Dedicated Charts
-        chart_col1, chart_col2 = st.columns(2)
-        with chart_col1:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#15803D;'>📜 Order Sales Revenue Trend</h5>", unsafe_allow_html=True)
-            order_chart_data = []
-            if all_orders:
-                for o in all_orders:
-                    o_id = f"Order #{o.get('order_id')}"
-                    p_cnt = o.get("product_count", 1)
-                    p_price = float(o.get("price_after_discount") or o.get("product_price") or 0.0)
-                    order_chart_data.append({"Order": o_id, "Revenue (₹)": round(p_cnt * p_price, 2)})
-                df_orders_chart = pd.DataFrame(order_chart_data).set_index("Order")
-            else:
-                df_orders_chart = pd.DataFrame({"Order": ["Order #1", "Order #2", "Order #3"], "Revenue (₹)": [180.0, 450.0, 320.0]}).set_index("Order")
-            st.line_chart(df_orders_chart, color="#22C55E", use_container_width=True)
+            c5, c6, c7 = st.columns(3)
+            c5.metric("Avg Customer Value", f"₹{avg_val:,.0f}")
+            c6.metric("Avg Order Value", f"₹{avg_aov:,.0f}")
+            c7.metric("Total Orders", f"{tot_ord:,}")
 
-        with chart_col2:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#15803D;'>🏆 Bestseller Produce Price Comparison</h5>", unsafe_allow_html=True)
-            bestsellers = fetch_bestsellers_db()
-            if bestsellers:
-                bs_chart_list = []
-                for b in bestsellers[:8]:
-                    bs_chart_list.append({
-                        "Product": b.get("product_name")[:18],
-                        "Selling Price (₹)": float(b.get("price_after_discount") or b.get("price") or 0.0)
-                    })
-                df_bs_chart = pd.DataFrame(bs_chart_list).set_index("Product")
-                st.bar_chart(df_bs_chart, color="#16A34A", use_container_width=True)
-            else:
-                st.info("No bestseller chart data available.")
+            st.divider()
 
-        st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        if "top_customers" in tables and tables["top_customers"] is not None:
+            st.subheader("🏆 Top 10 High-Value Customers")
+            st.dataframe(tables["top_customers"], use_container_width=True, hide_index=True)
+            st.divider()
 
-        # Details & Tables
-        col_s1, col_s2 = st.columns([1.2, 0.8])
-        with col_s1:
-            st.markdown("##### 🏆 Bestselling Organic Produce Details")
-            if bestsellers:
-                bs_data = []
-                for b in bestsellers:
-                    bs_data.append({
-                        "Product ID": f"#{b.get('product_id')}",
-                        "Product Name": b.get("product_name"),
-                        "Price": f"{CURRENCY}{float(b.get('price') or 0):,.2f}",
-                        "Discount %": f"{float(b.get('discount') or 0):.0f}%",
-                        "Final Price": f"{CURRENCY}{float(b.get('price_after_discount') or 0):,.2f}"
-                    })
-                st.dataframe(pd.DataFrame(bs_data), use_container_width=True, hide_index=True)
-            else:
-                st.info("No bestseller data recorded yet in Order_Details table.")
-
-        with col_s2:
-            st.markdown("##### 🔥 Top Discounted Deals")
-            deals = fetch_deals_db()
-            if deals:
-                deal_data = []
-                for d in deals[:6]:
-                    deal_data.append({
-                        "Product": d.get("product_name"),
-                        "Discount": f"{float(d.get('discount') or 0):.0f}% OFF",
-                        "Offer Price": f"{CURRENCY}{float(d.get('price_after_discount') or 0):,.2f}"
-                    })
-                st.dataframe(pd.DataFrame(deal_data), use_container_width=True, hide_index=True)
-            else:
-                st.info("No discounted deals available currently.")
-
-    # --- SECTION 2: PRODUCT CATALOG DATA ---
-    elif active_tab == "products":
-        st.markdown("<h4 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>📦 Product Catalog Data Analytics</h4>", unsafe_allow_html=True)
-
-        # Dedicated Charts
-        cat_counts = {}
-        for p in products:
-            c_name = cat_map.get(p.category_id, f"Cat #{p.category_id}")
-            cat_counts[c_name] = cat_counts.get(c_name, 0) + 1
-        df_cat_chart = pd.DataFrame(list(cat_counts.items()), columns=["Category", "Product Count"]).set_index("Category")
-
-        cat_stocks = {}
-        for p in products:
-            c_name = cat_map.get(p.category_id, f"Cat #{p.category_id}")
-            cat_stocks[c_name] = cat_stocks.get(c_name, 0) + getattr(p, "quantity", 50)
-        df_stock_chart = pd.DataFrame(list(cat_stocks.items()), columns=["Category", "Total Stock (Units)"]).set_index("Category")
-
-        top_prods = products[:10]
-        price_chart_data = []
-        for p in top_prods:
-            mrp = p.original_price or p.price
-            price_chart_data.append({
-                "Product": p.name[:18],
-                "MRP Price (₹)": mrp,
-                "Selling Price (₹)": p.price
-            })
-        df_price_chart = pd.DataFrame(price_chart_data).set_index("Product")
-
-        p_chart_c1, p_chart_c2, p_chart_c3 = st.columns(3)
-        with p_chart_c1:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>📂 Products per Category</h5>", unsafe_allow_html=True)
-            st.bar_chart(df_cat_chart, color="#16A34A", use_container_width=True)
-
-        with p_chart_c2:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>📦 Stock Inventory Levels</h5>", unsafe_allow_html=True)
-            st.area_chart(df_stock_chart, color="#15803D", use_container_width=True)
-
-        with p_chart_c3:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>💰 MRP vs Selling Price</h5>", unsafe_allow_html=True)
-            st.bar_chart(df_price_chart, use_container_width=True)
-
-        st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.5rem 0;'>", unsafe_allow_html=True)
-
-        # Details Table
-        prod_search = st.text_input("🔍 Search Catalog Products", placeholder="Type product name, category ID, or ID...")
-        filtered_prods = products
-        if prod_search:
-            q = prod_search.lower()
-            filtered_prods = [p for p in products if q in p.name.lower() or q in str(p.id) or q in p.category_slug.lower()]
-
-        prod_rows = []
-        for p in filtered_prods:
-            cat_name = cat_map.get(p.category_id, f"Category #{p.category_id}")
-            mrp = p.original_price or p.price
-            disc = p.discount_pct or 0
-            prod_rows.append({
-                "Product ID": f"#{p.id}",
-                "Product Name": p.name,
-                "Category": cat_name,
-                "MRP Price": f"{CURRENCY}{mrp:,.2f}/{p.unit}",
-                "Discount": f"{disc}%",
-                "Selling Price": f"{CURRENCY}{p.price:,.2f}/{p.unit}",
-                "Stock Qty": f"{getattr(p, 'quantity', 50)} {p.unit}",
-                "Farmer Origin": getattr(p, "farmer_name", "Co-Op Farmer"),
-                "Harvest Date": getattr(p, "harvest_date", "2026-07-15")
-            })
-        st.dataframe(pd.DataFrame(prod_rows), use_container_width=True, hide_index=True)
-
-    # --- SECTION 3: CUSTOMER DIRECTORY ---
-    elif active_tab == "customers":
-        st.markdown("<h4 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>👥 Customer Directory & Insights</h4>", unsafe_allow_html=True)
-
-        # Dedicated Charts
-        c_chart_col1, c_chart_col2 = st.columns(2)
-        with c_chart_col1:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#15803D;'>👥 Customer Account Breakdown</h5>", unsafe_allow_html=True)
-            df_cust_chart = pd.DataFrame({
-                "Account Type": ["Verified Member Customers", "Total Registered Accounts"],
-                "Count": [len(customers), len(customers)]
-            }).set_index("Account Type")
-            st.bar_chart(df_cust_chart, color="#16A34A", use_container_width=True)
-
-        with c_chart_col2:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#15803D;'>🛡️ Customer Roles Summary</h5>", unsafe_allow_html=True)
-            roles_cnt = {"Standard Customer": max(0, len(customers) - 1), "Admin Account": 1}
-            df_roles_chart = pd.DataFrame(list(roles_cnt.items()), columns=["Role", "Count"]).set_index("Role")
-            st.bar_chart(df_roles_chart, color="#22C55E", use_container_width=True)
-
-        st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.5rem 0;'>", unsafe_allow_html=True)
-
-        # Details Table
-        if not customers:
-            st.warning("No customer records found in Customer_Details table.")
-        else:
-            admin_user = st.session_state.get("user", "Admin")
-            admin_email = st.session_state.get("user_email", "admin@farmora.com")
-            admin_id = st.session_state.get("user_id", "1")
-            cust_table = []
-            for c in customers:
-                c_id = c.get("customer_id", "N/A")
-                c_name = c.get("customer_name", "N/A")
-                c_email = c.get("email_id", "N/A")
-                cust_table.append({
-                    "Customer ID": f"#{c_id}",
-                    "Full Name": c_name,
-                    "Email ID": c_email,
-                    "Account Status": "Verified Member",
-                    "Role": "Customer / Admin Privileged" if str(c_id) == str(admin_id) or c_email == admin_email else "Standard Customer"
-                })
-            st.dataframe(pd.DataFrame(cust_table), use_container_width=True, hide_index=True)
-
-    # --- SECTION 4: ORDER TRANSACTION LOG ---
-    elif active_tab == "orders":
-        st.markdown("<h4 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>📜 Order Transaction Log Analytics</h4>", unsafe_allow_html=True)
-
-        # Dedicated Charts
-        o_chart_c1, o_chart_c2 = st.columns(2)
-        with o_chart_c1:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#15803D;'>📈 Transaction Sales Revenue</h5>", unsafe_allow_html=True)
-            order_chart_data = []
-            if all_orders:
-                for o in all_orders:
-                    o_id = f"Order #{o.get('order_id')}"
-                    p_cnt = o.get("product_count", 1)
-                    p_price = float(o.get("price_after_discount") or o.get("product_price") or 0.0)
-                    order_chart_data.append({"Order": o_id, "Revenue (₹)": round(p_cnt * p_price, 2)})
-                df_orders_chart = pd.DataFrame(order_chart_data).set_index("Order")
-            else:
-                df_orders_chart = pd.DataFrame({"Order": ["Order #1", "Order #2", "Order #3"], "Revenue (₹)": [180.0, 450.0, 320.0]}).set_index("Order")
-            st.line_chart(df_orders_chart, color="#16A34A", use_container_width=True)
-
-        with o_chart_c2:
-            st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#15803D;'>📦 Quantity Units Purchased per Order</h5>", unsafe_allow_html=True)
-            qty_chart_data = []
-            if all_orders:
-                for o in all_orders:
-                    o_id = f"Order #{o.get('order_id')}"
-                    p_cnt = o.get("product_count", 1)
-                    qty_chart_data.append({"Order": o_id, "Quantity": p_cnt})
-                df_qty_chart = pd.DataFrame(qty_chart_data).set_index("Order")
-            else:
-                df_qty_chart = pd.DataFrame({"Order": ["Order #1"], "Quantity": [1]}).set_index("Order")
-            st.bar_chart(df_qty_chart, color="#15803D", use_container_width=True)
-
-        st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.5rem 0;'>", unsafe_allow_html=True)
-
-        # Details Table
-        if not all_orders:
-            st.info("No order transactions logged yet in Order_Details. Customers can place orders from their cart!")
-        else:
-            order_rows = []
-            for o in all_orders:
-                o_id = o.get("order_id")
-                c_name = o.get("customer_name") or f"Customer #{o.get('customer_id')}"
-                c_email = o.get("email_id") or "N/A"
-                p_name = o.get("product_name") or f"Product #{o.get('product_id')}"
-                qty = o.get("product_count", 1)
-                unit = o.get("unit") or "kg"
-                p_price = float(o.get("price_after_discount") or o.get("product_price") or 0.0)
-                tot = round(qty * p_price, 2)
-                o_date = str(o.get("order_date") or "").replace("@", "").strip()
-                o_time = str(o.get("order_time") or "").replace("@", "").strip()
-
-                order_rows.append({
-                    "Order ID": f"#{o_id}",
-                    "Customer Name": c_name,
-                    "Customer Email": c_email,
-                    "Product Item": p_name,
-                    "Quantity": f"{qty} {unit}",
-                    "Unit Price": f"{CURRENCY}{p_price:,.2f}",
-                    "Total Amount": f"{CURRENCY}{tot:,.2f}",
-                    "Order Date & Time": f"{o_date} {o_time}",
-                    "Status": "COMPLETED"
-                })
-            st.dataframe(pd.DataFrame(order_rows), use_container_width=True, hide_index=True)
-
-    # --- SECTION 5: AI & TRACEABILITY STATUS ---
-    elif active_tab == "ai":
-        st.markdown("<h4 style='font-family:Poppins, sans-serif; color:#1B4D3E;'>🤖 AI & Traceability Status</h4>", unsafe_allow_html=True)
-
-        # Dedicated Chart (SHAP Feature Importance)
-        st.markdown("<h5 style='font-family:Poppins, sans-serif; color:#15803D;'>🤖 LightGBM 20 SHAP Feature Importance Weights</h5>", unsafe_allow_html=True)
-        shap_features = {
-            'min_pp': 0.12, 'p90_pp': 0.11, 'p95_pad': 0.10, 'p25_pp': 0.09, 'p95_pp': 0.08,
-            'max_pp': 0.07, 'min_pad': 0.06, 'p75_pp': 0.06, 'max_pad': 0.05, 'p90_pad': 0.05,
-            'avg_pp': 0.04, 'p50_pp': 0.04, 'p25_pad': 0.03, 'p50_pad': 0.03, 'avg_pad': 0.02,
-            'p75_pad': 0.02, 'p90_pd': 0.01, 'total_pad': 0.01, 'max_pd': 0.005, 'p95_pd': 0.005
-        }
-        df_shap_chart = pd.DataFrame(list(shap_features.items()), columns=["Feature", "SHAP Weight"]).set_index("Feature")
-        st.bar_chart(df_shap_chart, color="#16A34A", use_container_width=True)
-
-        st.markdown("<hr style='border:0; height:1px; background:#E2E9E3; margin: 1.5rem 0;'>", unsafe_allow_html=True)
-
-        # Details Cards
-        col_ml1, col_ml2 = st.columns(2)
-        with col_ml1:
-            st.markdown(
-                """
-                <div style="background:#FFFFFF; border:1px solid #E2E9E3; border-radius:16px; padding:1.4rem;">
-                    <div style="font-weight:700; color:#1B4D3E; font-size:1.15rem; margin-bottom:0.6rem;">
-                        🤖 Recommendation & Multiclass Classification Models
-                    </div>
-                    <div style="font-size:0.92rem; color:#4A6B5D; line-height:1.7;">
-                        • <b>LightGBM Multiclass Model</b>: Active (<code>lgbm_multiclass_model.pkl</code>)<br>
-                        • <b>Random Forest Model</b>: Active (<code>rf_multiclass_model.pkl</code>)<br>
-                        • <b>XGBoost Model</b>: Active (<code>xgb_multiclass_model.pkl</code>)<br>
-                        • <b>Feature Label Encoder</b>: Active (<code>label_encoder.pkl</code>)
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
+        if "inactive_days_summary" in tables and tables["inactive_days_summary"] is not None:
+            st.subheader("📉 Inactive Days Distribution")
+            inactive_chart = (
+                alt.Chart(tables["inactive_days_summary"])
+                .mark_bar()
+                .encode(
+                    x=alt.X("inactive_days_group:N", sort=["0 days", "1-3 days", "4-7 days", "8-30 days", "31-90 days", "90+ days"], title="Inactive Days Group"),
+                    y=alt.Y("customer_count:Q", title="Customers"),
+                    tooltip=["inactive_days_group:N", "customer_count:Q", "customer_pct:Q", "total_revenue:Q"]
+                )
+                .properties(height=350)
             )
+            st.altair_chart(inactive_chart, use_container_width=True)
 
-        with col_ml2:
-            st.markdown(
-                """
-                <div style="background:#FFFFFF; border:1px solid #E2E9E3; border-radius:16px; padding:1.4rem;">
-                    <div style="font-weight:700; color:#1B4D3E; font-size:1.15rem; margin-bottom:0.6rem;">
-                        🌱 Farm Batch Traceability Audit
-                    </div>
-                    <div style="font-size:0.92rem; color:#4A6B5D; line-height:1.7;">
-                        • <b>Pesticide Residue Level</b>: 0.00 ppm (100% Pesticide Free)<br>
-                        • <b>Lab Accreditation</b>: NABL Certified Co-Op Labs<br>
-                        • <b>Primary Source</b>: Mandya & Salem Farmer Co-Ops<br>
-                        • <b>Traceability Database</b>: Active MySQL Synchronization
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
+    # ------------------------------------------------------------------------
+    # SECTION 3: PRODUCT PERFORMANCE
+    # ------------------------------------------------------------------------
+    elif selected_section == "🏆 Product Performance":
+        st.subheader("🏆 Product Revenue & Sales Performance")
+
+        top_10 = tables.get("top_10_products")
+        prod_sum = tables.get("product_summary")
+
+        if top_10 is not None and prod_sum is not None:
+            col1, col2 = st.columns(2)
+            with col1:
+                fig2 = px.treemap(
+                    top_10,
+                    path=["product_id"],
+                    values="total_revenue",
+                    color="avg_discount",
+                    color_continuous_scale="RdYlGn_r",
+                    title="Revenue Share of Top 10 Products (size = revenue, color = avg discount)",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            with col2:
+                fig3 = px.scatter(
+                    prod_sum,
+                    x="avg_price",
+                    y="total_quantity",
+                    size="total_revenue",
+                    color="revenue_share_pct",
+                    hover_name="product_id",
+                    title="Price vs Quantity Sold (bubble = revenue)",
+                    template=CHART_TEMPLATE,
+                    color_continuous_scale="Viridis",
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            st.markdown("##### 📦 Top 10 Products Breakdown")
+            st.dataframe(top_10, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------------------
+    # SECTION 4: DAY-OF-WEEK TRENDS
+    # ------------------------------------------------------------------------
+    elif selected_section == "📅 Day-of-Week Trends":
+        st.subheader("📅 Sales Revenue by Day of Week")
+
+        dow_revenue = tables.get("dow_revenue")
+        if dow_revenue is not None:
+            fig = px.line_polar(
+                dow_revenue,
+                r="total_revenue",
+                theta="day_of_week",
+                line_close=True,
+                title="Revenue Radar by Day of Week",
+                template=CHART_TEMPLATE,
             )
+            fig.update_traces(fill="toself")
+            st.plotly_chart(fig, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                fig2 = px.bar(
+                    dow_revenue,
+                    x="day_of_week",
+                    y="transaction_count",
+                    color="avg_revenue",
+                    color_continuous_scale="Teal",
+                    title="Transaction Count by Day",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            with col2:
+                fig3 = px.funnel(
+                    dow_revenue.sort_values("total_revenue", ascending=False),
+                    x="total_revenue",
+                    y="day_of_week",
+                    title="Days Ranked by Total Revenue",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            st.dataframe(dow_revenue, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------------------
+    # SECTION 5: MONTHLY REVENUE TREND
+    # ------------------------------------------------------------------------
+    elif selected_section == "📈 Monthly Revenue Trend":
+        st.subheader("📈 Monthly Revenue & Cumulative Growth")
+
+        monthly_rev = tables.get("monthly_revenue")
+        if monthly_rev is not None:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=monthly_rev["month"], y=monthly_rev["total_revenue"], name="Monthly Revenue"))
+            fig.add_trace(go.Scatter(x=monthly_rev["month"], y=monthly_rev["cumulative_revenue"], name="Cumulative Revenue", yaxis="y2", mode="lines+markers"))
+            fig.update_layout(
+                title="Monthly Revenue with Cumulative Overlay",
+                yaxis=dict(title="Monthly Revenue (₹)"),
+                yaxis2=dict(title="Cumulative Revenue (₹)", overlaying="y", side="right"),
+                template=CHART_TEMPLATE,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                fig2 = px.bar(
+                    monthly_rev,
+                    x="month",
+                    y="mom_growth_pct",
+                    color="mom_growth_pct",
+                    color_continuous_scale="RdYlGn",
+                    title="Month-over-Month Growth %",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            with col2:
+                fig3 = px.area(
+                    monthly_rev,
+                    x="month",
+                    y="pct_of_total",
+                    title="Share of Total Revenue by Month",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            st.dataframe(monthly_rev, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------------------
+    # SECTION 6: DISCOUNT ANALYSIS
+    # ------------------------------------------------------------------------
+    elif selected_section == "🏷️ Discount Analysis":
+        st.subheader("🏷️ Discount Bucket & Margin Impact Analysis")
+
+        disc_df = tables.get("discount_bucket_summary")
+        if disc_df is not None:
+            fig = px.bar(
+                disc_df,
+                x="discount_group",
+                y="total_revenue",
+                color="revenue_share_pct",
+                color_continuous_scale="Sunset",
+                title="Revenue by Discount Bucket",
+                template=CHART_TEMPLATE,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                fig2 = px.pie(
+                    disc_df,
+                    names="discount_group",
+                    values="total_qty",
+                    title="Quantity Sold Share by Discount Bucket",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            with col2:
+                fig3 = px.scatter(
+                    disc_df,
+                    x="avg_qty",
+                    y="unique_customers",
+                    size="total_revenue",
+                    color="discount_group",
+                    title="Avg Qty vs Unique Customers by Discount Bucket",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            st.dataframe(disc_df, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------------------
+    # SECTION 7: RFM SEGMENTATION
+    # ------------------------------------------------------------------------
+    elif selected_section == "🎯 RFM Segmentation":
+        st.subheader("🎯 RFM (Recency, Frequency, Monetary) Customer Segmentation")
+
+        rfm = tables.get("rfm")
+        seg_sum = tables.get("segment_summary")
+
+        if seg_sum is not None:
+            fig = px.treemap(
+                seg_sum,
+                path=["segment"],
+                values="customer_count",
+                color="total_revenue",
+                color_continuous_scale="Blues",
+                title="Customer Segments (size = customer count, color = revenue)",
+                template=CHART_TEMPLATE,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                fig2 = px.bar(
+                    seg_sum.sort_values("total_revenue"),
+                    x="total_revenue",
+                    y="segment",
+                    orientation="h",
+                    title="Total Revenue by RFM Segment",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            with col2:
+                if rfm is not None:
+                    fig3 = px.scatter_3d(
+                        rfm,
+                        x="R_score",
+                        y="F_score",
+                        z="M_score",
+                        color="segment",
+                        opacity=0.7,
+                        title="3D RFM Score Cube",
+                        template=CHART_TEMPLATE,
+                    )
+                    st.plotly_chart(fig3, use_container_width=True)
+
+            st.dataframe(seg_sum, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------------------
+    # SECTION 8: NEW VS RETURNING CUSTOMERS
+    # ------------------------------------------------------------------------
+    elif selected_section == "🔁 New vs Returning Customers":
+        st.subheader("🔁 New vs Returning Customer Analysis")
+
+        cust_type = tables.get("customer_type_summary")
+        if cust_type is not None:
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = px.pie(
+                    cust_type,
+                    names="customer_type",
+                    values="unique_customers",
+                    title="Customer Count Split",
+                    hole=0.4,
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                fig2 = px.bar(
+                    cust_type,
+                    x="customer_type",
+                    y="revenue_per_customer",
+                    color="customer_type",
+                    title="Revenue per Customer (₹)",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            share_metrics = ["pct_of_total_revenue", "pct_of_total_orders", "pct_of_total_customers"]
+            fig3 = go.Figure(
+                data=[
+                    go.Bar(
+                        name=metric.replace("pct_of_total_", "").capitalize(),
+                        x=cust_type["customer_type"],
+                        y=cust_type[metric],
+                    )
+                    for metric in share_metrics
+                ]
+            )
+            fig3.update_layout(barmode="group", title="Share of Revenue / Orders / Customers (%)", template=CHART_TEMPLATE)
+            st.plotly_chart(fig3, use_container_width=True)
+
+            st.dataframe(cust_type, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------------------
+    # SECTION 9: ORDER FREQUENCY BUCKETS
+    # ------------------------------------------------------------------------
+    elif selected_section == "🧮 Order Frequency Buckets":
+        st.subheader("🧮 Order Count Frequency Distribution")
+
+        ord_bucket = tables.get("order_bucket_distribution")
+        if ord_bucket is not None:
+            fig = px.funnel(
+                ord_bucket,
+                x="num_customers",
+                y="order_bucket",
+                title="Customers by Order Frequency Bucket",
+                template=CHART_TEMPLATE,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                fig2 = px.pie(
+                    ord_bucket,
+                    names="order_bucket",
+                    values="total_revenue",
+                    title="Revenue Share by Order Bucket",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            with col2:
+                fig3 = px.bar(
+                    ord_bucket,
+                    x="order_bucket",
+                    y=["pct_of_customers", "pct_of_revenue"],
+                    barmode="group",
+                    title="% of Customers vs % of Revenue",
+                    template=CHART_TEMPLATE,
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            st.dataframe(ord_bucket, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------------------
+    # SECTION 10: LIVE ADMIN OPERATIONS
+    # ------------------------------------------------------------------------
+    elif selected_section == "⚙️ Live Admin Operations":
+        st.subheader("⚙️ Live Database Operations & Catalog Directory")
+
+        products = get_products_by_category("all")
+        categories = get_all_categories()
+        customers = fetch_all_customers_db()
+        all_orders = fetch_all_orders_db()
+
+        total_revenue = sum(o.get("product_count", 1) * float(o.get("price_after_discount") or o.get("product_price") or 0.0) for o in all_orders)
+
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("🛍️ Catalog Products", len(products))
+        c2.metric("📂 Categories", len(categories))
+        c3.metric("👥 DB Customers", len(customers))
+        c4.metric("📜 DB Orders", len(all_orders))
+        c5.metric("💰 Live Revenue", f"{CURRENCY}{total_revenue:,.2f}")
+
+        st.divider()
+
+        op_tab1, op_tab2, op_tab3 = st.tabs(["📦 Products Catalog", "👥 Customer Directory", "📜 Order Log"])
+
+        with op_tab1:
+            prod_rows = []
+            for p in products:
+                prod_rows.append({
+                    "ID": f"#{p.id}",
+                    "Product": p.name,
+                    "Price": f"{CURRENCY}{p.price:,.2f}/{p.unit}",
+                    "Stock": f"{getattr(p, 'quantity', 50)} {p.unit}",
+                    "Origin": getattr(p, "farmer_name", "Co-Op Farmer"),
+                })
+            st.dataframe(pd.DataFrame(prod_rows), use_container_width=True, hide_index=True)
+
+        with op_tab2:
+            if customers:
+                c_rows = [{"ID": f"#{c.get('customer_id')}", "Name": c.get('customer_name'), "Email": c.get('email_id')} for c in customers]
+                st.dataframe(pd.DataFrame(c_rows), use_container_width=True, hide_index=True)
+            else:
+                st.info("No customer records found.")
+
+        with op_tab3:
+            if all_orders:
+                o_rows = []
+                for o in all_orders:
+                    qty = o.get("product_count", 1)
+                    p_price = float(o.get("price_after_discount") or o.get("product_price") or 0.0)
+                    o_rows.append({
+                        "Order ID": f"#{o.get('order_id')}",
+                        "Customer": o.get("customer_name") or f"Customer #{o.get('customer_id')}",
+                        "Product": o.get("product_name") or f"Product #{o.get('product_id')}",
+                        "Quantity": qty,
+                        "Total Amount": f"{CURRENCY}{round(qty * p_price, 2):,.2f}",
+                        "Status": "COMPLETED"
+                    })
+                st.dataframe(pd.DataFrame(o_rows), use_container_width=True, hide_index=True)
+            else:
+                st.info("No orders placed yet.")
