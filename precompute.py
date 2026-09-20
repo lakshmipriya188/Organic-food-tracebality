@@ -19,12 +19,18 @@ os.makedirs(OUT_DIR, exist_ok=True)
 import pandas as pd
 from sqlalchemy import create_engine
 
-# MySQL connection
-DB_USER = "root"
-DB_PASSWORD = "root123"
-DB_HOST = "localhost"
-DB_PORT = "3306"
-DB_NAME = "farmora"
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# MySQL connection (from .env)
+DB_HOST = os.environ.get("MYSQL_HOST", "localhost")
+DB_PORT = os.environ.get("MYSQL_PORT", "3306")
+DB_USER = os.environ.get("MYSQL_USER", "root")
+DB_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
+DB_NAME = os.environ.get("MYSQL_DATABASE", "farmora")
 
 engine = create_engine(
     f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

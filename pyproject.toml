@@ -16,4 +16,5 @@ dependencies = [
     "sqlalchemy>=2.0.52",
     "streamlit>=1.60.0",
     "xgboost>=3.4.1",
+    "python-dotenv>=1.0.0",
 ]

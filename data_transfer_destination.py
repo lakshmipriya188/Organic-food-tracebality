@@ -1,27 +1,46 @@
+import os
 import pymysql
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ============================================
-# SOURCE DATABASE
+# SOURCE DATABASE (Loaded from .env / env vars)
 # ============================================
+
+SOURCE_HOST = os.environ.get("SOURCE_MYSQL_HOST", os.environ.get("MYSQL_HOST", "localhost"))
+SOURCE_PORT = int(os.environ.get("SOURCE_MYSQL_PORT", os.environ.get("MYSQL_PORT", 3306)))
+SOURCE_USER = os.environ.get("SOURCE_MYSQL_USER", os.environ.get("MYSQL_USER", "root"))
+SOURCE_PASSWORD = os.environ.get("SOURCE_MYSQL_PASSWORD", os.environ.get("MYSQL_PASSWORD", ""))
+SOURCE_DATABASE = os.environ.get("SOURCE_MYSQL_DATABASE", os.environ.get("MYSQL_DATABASE", "farmora"))
 
 source_db = pymysql.connect(
-    host="localhost",
-    user="root",
-    password="root123",
-    database="farmora"
+    host=SOURCE_HOST,
+    port=SOURCE_PORT,
+    user=SOURCE_USER,
+    password=SOURCE_PASSWORD,
+    database=SOURCE_DATABASE
 )
 
+# ============================================
+# DESTINATION DATABASE (Loaded from .env / env vars)
+# ============================================
 
-# ============================================
-# DESTINATION DATABASE
-# ============================================
+DEST_HOST = os.environ.get("DEST_MYSQL_HOST", "database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com")
+DEST_PORT = int(os.environ.get("DEST_MYSQL_PORT", 3306))
+DEST_USER = os.environ.get("DEST_MYSQL_USER", "admin")
+DEST_PASSWORD = os.environ.get("DEST_MYSQL_PASSWORD", "6Td%T%3DBg")
+DEST_DATABASE = os.environ.get("DEST_MYSQL_DATABASE", "farmora")
 
 target_db = pymysql.connect(
-    host="database-1.cl84msuko0wj.eu-north-1.rds.amazonaws.com",
-    user="admin",
-    password="6Td%T%3DBg",
-    database="farmora"
+    host=DEST_HOST,
+    port=DEST_PORT,
+    user=DEST_USER,
+    password=DEST_PASSWORD,
+    database=DEST_DATABASE
 )
 
 

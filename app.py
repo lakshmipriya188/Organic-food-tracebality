@@ -1,5 +1,8 @@
 """Main Streamlit Application for Organic Foods - Premium Organic View."""
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import streamlit as st
 from utils.cart_manager import _init_state, go_to
 from components.header import render_header
@@ -11,11 +14,12 @@ from cart_page import render_cart_page
 from wishlist_page import render_wishlist_page
 from login_page import render_login_page
 from traceability_page import render_traceability_page
-from pages.store_locations_page import render_store_locations_page
-from pages.deals_page import render_deals_page
-from pages.search_page import render_search_page
+from page_components.store_locations_page import render_store_locations_page
+from page_components.deals_page import render_deals_page
+from page_components.search_page import render_search_page
 from ml_prediction_page import render_ml_prediction_page
 from admin_page import render_admin_page
+from product_config_page import render_product_config_page
 
 
 def inject_classic_styles():
@@ -42,10 +46,14 @@ def inject_classic_styles():
             letter-spacing: -0.3px;
         }
 
-        /* Hide Streamlit Sidebar Navigation Drawer */
+        /* Hide Streamlit Sidebar Navigation Drawer & Sidebar completely */
         [data-testid="stSidebarNav"],
-        section[data-testid="stSidebar"] {
+        [data-testid="stSidebar"],
+        section[data-testid="stSidebar"],
+        div[data-testid="stSidebarNav"],
+        ul[data-testid="stSidebarNavItems"] {
             display: none !important;
+            width: 0px !important;
         }
 
         /* Streamlit Top Navigation & Padding Fix */
@@ -286,8 +294,16 @@ Welcome back, {user_name}!
         render_search_page()
     elif page == "ml_prediction":
         render_ml_prediction_page()
-    elif page == "admin":
+    elif page == "admin" or page == "dashboard":
+        if not st.session_state.get("is_admin"):
+            st.session_state.page = "home"
+            st.rerun()
         render_admin_page()
+    elif page == "product" or page == "product_config":
+        if not st.session_state.get("is_admin"):
+            st.session_state.page = "home"
+            st.rerun()
+        render_product_config_page()
     else:
         render_categories()
         render_favourites()

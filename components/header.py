@@ -69,28 +69,34 @@ def render_header():
             u_label = f"👤 {user_name}"
 
             if is_admin:
-                act_col1, act_col2, act_col3, act_col4, act_col5 = st.columns(5)
+                # Admin Header Navigation Bar: 6 Actions
+                act_col1, act_col2, act_col3, act_col4, act_col5, act_col6 = st.columns(6)
                 with act_col1:
                     if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
                         go_to("ml_prediction")
                         st.rerun()
                 with act_col2:
+                    if st.button("📊 Dashboard", key="hdr_dash_btn", use_container_width=True):
+                        go_to("dashboard")
+                        st.rerun()
+                with act_col3:
+                    if st.button("📦 Product", key="hdr_prod_btn", use_container_width=True):
+                        go_to("product")
+                        st.rerun()
+                with act_col4:
                     if st.button(w_label, key="hdr_wish_btn", use_container_width=True):
                         go_to("wishlist")
                         st.rerun()
-                with act_col3:
+                with act_col5:
                     if st.button(c_label, key="hdr_cart_btn", use_container_width=True):
                         go_to("cart")
                         st.rerun()
-                with act_col4:
+                with act_col6:
                     if st.button(u_label, key="hdr_user_btn", use_container_width=True):
                         go_to("account")
                         st.rerun()
-                with act_col5:
-                    if st.button("🛡️ Admin", key="hdr_admin_btn", use_container_width=True):
-                        go_to("admin")
-                        st.rerun()
             else:
+                # Customer Header Navigation Bar: 4 Actions (Dashboard & Product hidden)
                 act_col1, act_col2, act_col3, act_col4 = st.columns(4)
                 with act_col1:
                     if st.button("🤖 Ask Me", key="hdr_ai_btn", use_container_width=True):
