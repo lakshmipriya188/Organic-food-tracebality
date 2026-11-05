@@ -241,8 +241,16 @@ def render_dashboard():
             st.divider()
 
         if "top_customers" in tables and tables["top_customers"] is not None:
-            st.subheader("🏆 Top 10 High-Value Customers")
-            st.dataframe(tables["top_customers"], use_container_width=True, hide_index=True)
+            if "show_details_top_customers" not in st.session_state:
+                st.session_state.show_details_top_customers = False
+
+            if st.button("View Details", key="btn_top_customers"):
+                st.session_state.show_details_top_customers = not st.session_state.show_details_top_customers
+                st.rerun()
+
+            if st.session_state.show_details_top_customers:
+                st.subheader("🏆 Top 10 High-Value Customers")
+                st.dataframe(tables["top_customers"], use_container_width=True, hide_index=True)
             st.divider()
 
         if "inactive_days_summary" in tables and tables["inactive_days_summary"] is not None:
@@ -293,8 +301,16 @@ def render_dashboard():
                 )
                 st.plotly_chart(fig3, use_container_width=True)
 
-            st.markdown("##### 📦 Top 10 Products Breakdown")
-            st.dataframe(top_10, use_container_width=True, hide_index=True)
+            if "show_details_top_10" not in st.session_state:
+                st.session_state.show_details_top_10 = False
+
+            if st.button("View Details", key="btn_top_10"):
+                st.session_state.show_details_top_10 = not st.session_state.show_details_top_10
+                st.rerun()
+
+            if st.session_state.show_details_top_10:
+                st.markdown("##### 📦 Top 10 Products Breakdown")
+                st.dataframe(top_10, use_container_width=True, hide_index=True)
 
     elif selected_section == "📅 Day-of-Week Trends":
         st.subheader("📅 Sales Revenue by Day of Week")
@@ -335,7 +351,15 @@ def render_dashboard():
                 )
                 st.plotly_chart(fig3, use_container_width=True)
 
-            st.dataframe(dow_revenue, use_container_width=True, hide_index=True)
+            if "show_details_dow" not in st.session_state:
+                st.session_state.show_details_dow = False
+
+            if st.button("View Details", key="btn_dow"):
+                st.session_state.show_details_dow = not st.session_state.show_details_dow
+                st.rerun()
+
+            if st.session_state.show_details_dow:
+                st.dataframe(dow_revenue, use_container_width=True, hide_index=True)
 
     elif selected_section == "📈 Monthly Revenue Trend":
         st.subheader("📈 Monthly Revenue & Cumulative Growth")
@@ -376,7 +400,15 @@ def render_dashboard():
                 )
                 st.plotly_chart(fig3, use_container_width=True)
 
-            st.dataframe(monthly_rev, use_container_width=True, hide_index=True)
+            if "show_details_monthly_rev" not in st.session_state:
+                st.session_state.show_details_monthly_rev = False
+
+            if st.button("View Details", key="btn_monthly_rev"):
+                st.session_state.show_details_monthly_rev = not st.session_state.show_details_monthly_rev
+                st.rerun()
+
+            if st.session_state.show_details_monthly_rev:
+                st.dataframe(monthly_rev, use_container_width=True, hide_index=True)
 
     elif selected_section == "🏷️ Discount Analysis":
         st.subheader("🏷️ Discount Bucket & Margin Impact Analysis")
@@ -417,7 +449,15 @@ def render_dashboard():
                 )
                 st.plotly_chart(fig3, use_container_width=True)
 
-            st.dataframe(disc_df, use_container_width=True, hide_index=True)
+            if "show_details_disc" not in st.session_state:
+                st.session_state.show_details_disc = False
+
+            if st.button("View Details", key="btn_disc"):
+                st.session_state.show_details_disc = not st.session_state.show_details_disc
+                st.rerun()
+
+            if st.session_state.show_details_disc:
+                st.dataframe(disc_df, use_container_width=True, hide_index=True)
 
     elif selected_section == "🎯 RFM Segmentation":
         st.subheader("🎯 RFM (Recency, Frequency, Monetary) Customer Segmentation")
@@ -463,7 +503,15 @@ def render_dashboard():
                     )
                     st.plotly_chart(fig3, use_container_width=True)
 
-            st.dataframe(seg_sum, use_container_width=True, hide_index=True)
+            if "show_details_seg_sum" not in st.session_state:
+                st.session_state.show_details_seg_sum = False
+
+            if st.button("View Details", key="btn_seg_sum"):
+                st.session_state.show_details_seg_sum = not st.session_state.show_details_seg_sum
+                st.rerun()
+
+            if st.session_state.show_details_seg_sum:
+                st.dataframe(seg_sum, use_container_width=True, hide_index=True)
 
     elif selected_section == "🔁 New vs Returning Customers":
         st.subheader("🔁 New vs Returning Customer Analysis")
@@ -507,7 +555,15 @@ def render_dashboard():
             fig3.update_layout(barmode="group", title="Share of Revenue / Orders / Customers (%)", template=CHART_TEMPLATE)
             st.plotly_chart(fig3, use_container_width=True)
 
-            st.dataframe(cust_type, use_container_width=True, hide_index=True)
+            if "show_details_cust_type" not in st.session_state:
+                st.session_state.show_details_cust_type = False
+
+            if st.button("View Details", key="btn_cust_type"):
+                st.session_state.show_details_cust_type = not st.session_state.show_details_cust_type
+                st.rerun()
+
+            if st.session_state.show_details_cust_type:
+                st.dataframe(cust_type, use_container_width=True, hide_index=True)
 
     elif selected_section == "🧮 Order Frequency Buckets":
         st.subheader("🧮 Order Count Frequency Distribution")
@@ -545,7 +601,15 @@ def render_dashboard():
                 )
                 st.plotly_chart(fig3, use_container_width=True)
 
-            st.dataframe(ord_bucket, use_container_width=True, hide_index=True)
+            if "show_details_ord_bucket" not in st.session_state:
+                st.session_state.show_details_ord_bucket = False
+
+            if st.button("View Details", key="btn_ord_bucket"):
+                st.session_state.show_details_ord_bucket = not st.session_state.show_details_ord_bucket
+                st.rerun()
+
+            if st.session_state.show_details_ord_bucket:
+                st.dataframe(ord_bucket, use_container_width=True, hide_index=True)
 
     elif selected_section == "⚙️ Live Admin Operations":
         st.subheader("⚙️ Live Database Operations & Catalog Directory")
@@ -578,12 +642,28 @@ def render_dashboard():
                     "Stock": f"{getattr(p, 'quantity', 50)} {p.unit}",
                     "Origin": getattr(p, "farmer_name", "Co-Op Farmer"),
                 })
-            st.dataframe(pd.DataFrame(prod_rows), use_container_width=True, hide_index=True)
+            if "show_details_op_prod" not in st.session_state:
+                st.session_state.show_details_op_prod = False
+
+            if st.button("View Details", key="btn_op_prod"):
+                st.session_state.show_details_op_prod = not st.session_state.show_details_op_prod
+                st.rerun()
+
+            if st.session_state.show_details_op_prod:
+                st.dataframe(pd.DataFrame(prod_rows), use_container_width=True, hide_index=True)
 
         with op_tab2:
             if customers:
                 c_rows = [{"ID": f"#{c.get('customer_id')}", "Name": c.get('customer_name'), "Email": c.get('email_id')} for c in customers]
-                st.dataframe(pd.DataFrame(c_rows), use_container_width=True, hide_index=True)
+                if "show_details_op_cust" not in st.session_state:
+                    st.session_state.show_details_op_cust = False
+
+                if st.button("View Details", key="btn_op_cust"):
+                    st.session_state.show_details_op_cust = not st.session_state.show_details_op_cust
+                    st.rerun()
+
+                if st.session_state.show_details_op_cust:
+                    st.dataframe(pd.DataFrame(c_rows), use_container_width=True, hide_index=True)
             else:
                 st.info("No customer records found.")
 
@@ -601,6 +681,14 @@ def render_dashboard():
                         "Total Amount": f"{CURRENCY}{round(qty * p_price, 2):,.2f}",
                         "Status": "COMPLETED"
                     })
-                st.dataframe(pd.DataFrame(o_rows), use_container_width=True, hide_index=True)
+                if "show_details_op_ord" not in st.session_state:
+                    st.session_state.show_details_op_ord = False
+
+                if st.button("View Details", key="btn_op_ord"):
+                    st.session_state.show_details_op_ord = not st.session_state.show_details_op_ord
+                    st.rerun()
+
+                if st.session_state.show_details_op_ord:
+                    st.dataframe(pd.DataFrame(o_rows), use_container_width=True, hide_index=True)
             else:
                 st.info("No orders placed yet.")

@@ -23,6 +23,121 @@ SELECTED_FEATURES = [
     'max_pd', 'p95_pd'
 ]
 
+PRODUCT_BENEFITS = {
+    "apple": "Rich in fiber and antioxidants, supporting overall health.",
+    "banana": "Packed with potassium and natural energy for active lifestyles.",
+    "mango": "High in vitamins A & C, enhancing immunity and skin health.",
+    "orange": "Excellent source of Vitamin C to boost natural immunity.",
+    "pomegranate": "Loaded with antioxidants that promote healthy blood circulation.",
+    "guava": "Rich in dietary fiber and Vitamin C for digestive wellness.",
+    "watermelon": "Deeply hydrating and rich in lycopene for cellular health.",
+    "dragon": "Contains prebiotic fiber and antioxidants for immunity.",
+    "pineapple": "Contains bromelain enzymes that aid digestion and reduce inflammation.",
+    "sweet lime": "Refreshing and rich in electrolytes for natural hydration.",
+    "tomato": "Packed with lycopene and antioxidants for heart health.",
+    "potato": "Rich in complex carbohydrates and potassium for daily energy.",
+    "onion": "Contains anti-inflammatory quercetin and essential minerals.",
+    "carrot": "Rich in beta-carotene and Vitamin A for healthy vision.",
+    "cabbage": "Low-calorie, fiber-dense vegetable supporting digestive health.",
+    "cauliflower": "Nutrient-dense cruciferous vegetable high in Vitamin C.",
+    "spinach": "Iron and folate rich green for blood health.",
+    "broccoli": "Packed with sulforaphane and antioxidants for immunity.",
+    "beetroot": "Rich in nitrates supporting stamina and circulation.",
+    "cucumber": "Hydrating and cooling vegetable rich in natural silica.",
+    "rice": "Wholesome gluten-free staple providing clean energy.",
+    "wheat": "High in fiber and essential minerals for daily nutrition.",
+    "ragi": "Calcium-rich ancient grain for strong bones and gut health.",
+    "foxtail": "Low-GI millet rich in dietary fiber for steady energy.",
+    "quinoa": "Complete plant protein packed with essential amino acids.",
+    "oats": "Beta-glucan rich fiber source supporting heart wellness.",
+    "toor": "Protein-rich legume supporting muscle strength and repair.",
+    "moong": "Easy to digest protein source rich in folate and iron.",
+    "chana": "High-fiber pulse that keeps you full and energized.",
+    "urad": "Rich in protein, iron, and essential minerals.",
+    "milk": "Pure A2 milk rich in natural calcium and protein.",
+    "ghee": "Traditional A2 ghee rich in healthy fats and butyric acid.",
+    "butter": "Cultured butter providing natural fat-soluble vitamins.",
+    "paneer": "Fresh high-protein cottage cheese for muscle building.",
+    "oil": "Cold-pressed oil retaining natural antioxidants and nutrients.",
+    "turmeric": "Contains curcumin, a potent natural anti-inflammatory.",
+    "pepper": "Enhances nutrient absorption and boosts natural metabolism.",
+    "almond": "Rich in Vitamin E and healthy fats for brain health.",
+    "cashew": "Packed with magnesium and healthy monounsaturated fats.",
+    "raisin": "Natural iron and antioxidant booster for quick energy.",
+    "walnut": "Omega-3 fatty acid power source for heart and brain.",
+}
+
+def get_product_benefit(product_id, product_name):
+    """Return a short line describing the product's use or benefit."""
+    try:
+        prod_obj = get_product_by_id(str(product_id))
+        if prod_obj and prod_obj.description and len(prod_obj.description.strip()) > 0:
+            desc = prod_obj.description.strip()
+            if len(desc) <= 90:
+                return desc
+    except Exception:
+        pass
+
+    name_lower = str(product_name).lower()
+    for key, benefit in PRODUCT_BENEFITS.items():
+        if key in name_lower:
+            return benefit
+
+    return "Rich in essential nutrients, supporting a healthy organic lifestyle."
+
+PRODUCT_HEALTH_FACTS = {
+    "apple": "Managing cholesterol, regulating blood sugar & supporting heart health.",
+    "banana": "Managing blood pressure, muscle cramp prevention & energy.",
+    "mango": "Eye vision care, skin health & boosting immunity.",
+    "orange": "Immune defense, scurvy prevention & blood pressure support.",
+    "pomegranate": "Lowering blood pressure, reducing arterial plaque & anti-inflammation.",
+    "guava": "Diabetic care (low GI), digestive regulation & immunity.",
+    "watermelon": "Hydration care, kidney health & reducing muscle soreness.",
+    "dragon": "Gut microbiome wellness, managing blood sugar & anemia support.",
+    "pineapple": "Joint arthritis discomfort, reducing inflammation & digestion.",
+    "sweet lime": "Acidity relief, scurvy prevention & natural hydration.",
+    "tomato": "Heart disease prevention, prostate health & lycopene skin care.",
+    "potato": "Nerve health, potassium balance & muscle recovery.",
+    "onion": "Blood sugar management, infection defense & heart care.",
+    "carrot": "Preventing night blindness, eye macula care & stroke reduction.",
+    "cabbage": "Peptic ulcer prevention, gut detox & cholesterol care.",
+    "cauliflower": "Cellular detox, bone strength & reducing oxidative stress.",
+    "spinach": "Preventing anemia, hemoglobin support & bone density.",
+    "broccoli": "Cellular protection, sulforaphane intake & heart wellness.",
+    "beetroot": "Lowering high blood pressure, liver detox & boosting stamina.",
+    "cucumber": "Toxin flushing, kidney stone prevention & skin cooling.",
+    "rice": "Sensitive stomach recovery, gluten-free digestion & clean energy.",
+    "wheat": "Preventing type-2 diabetes & bowel movement health.",
+    "ragi": "Osteoporosis prevention, calcium deficiency & diabetic care.",
+    "foxtail": "Controlling diabetic sugar spikes & heart wellness.",
+    "quinoa": "Metabolic health, diabetic wellness & muscle recovery.",
+    "oats": "Lowering LDL cholesterol & protecting heart arteries.",
+    "toor": "Tissue repair, anemia prevention & muscle development.",
+    "moong": "Convalescence care, easy gut digestion & liver detox.",
+    "chana": "Blood sugar stabilization & long-term heart disease care.",
+    "urad": "Combating fatigue, joint health & boosting vitality.",
+    "milk": "Building bone density, osteoporosis prevention & restful sleep.",
+    "ghee": "Gut lining repair, joint lubrication & brain health.",
+    "butter": "Fat-soluble vitamin absorption & bone health.",
+    "paneer": "Muscle building, bone strength & sustained satiety.",
+    "oil": "Cardiovascular wellness & cell membrane nourishment.",
+    "turmeric": "Relieving joint arthritis inflammation & supporting liver health.",
+    "pepper": "Respiratory decongestion, metabolism boost & digestion.",
+    "almond": "Heart disease risk reduction, memory support & blood sugar control.",
+    "cashew": "Bone health, gallstone prevention & healthy blood vessels.",
+    "raisin": "Anemia prevention, constipation relief & bone density.",
+    "walnut": "Brain cognitive health, reducing arterial stiffness & heart care.",
+}
+
+def get_product_health_fact(product_id, product_name):
+    """Return an educational line on health benefits / disease prevention for the product."""
+    name_lower = str(product_name).lower()
+    for key, fact in PRODUCT_HEALTH_FACTS.items():
+        if key in name_lower:
+            return fact
+
+    return "General wellness, boosting immunity & supporting daily metabolic health."
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -387,6 +502,8 @@ def render_ml_prediction_page():
 
     for idx, (col, item) in enumerate(zip(cols, top_predictions), 1):
         prod_id = item['product_id']
+        benefit_text = get_product_benefit(prod_id, item['product_name'])
+        health_fact = get_product_health_fact(prod_id, item['product_name'])
         with col:
             st.markdown(
                 f"""
@@ -409,8 +526,14 @@ def render_ml_prediction_page():
                     <div style="font-family:'Poppins', sans-serif; font-size:1.1rem; font-weight:700; color:#1B4D3E; margin: 8px 0 4px 0; line-height:1.3; min-height: 2.6rem;">
                         {item['product_name']}
                     </div>
-                    <div style="font-size:0.8rem; color:#6B7280; margin-bottom:8px;">
+                    <div style="font-size:0.8rem; color:#6B7280; margin-bottom:6px;">
                         Category: <b>{item['category']}</b>
+                    </div>
+                    <div style="font-size:0.83rem; color:#15803D; font-weight:500; margin-bottom:4px; line-height:1.35;">
+                        🌱 <i>"{benefit_text}"</i>
+                    </div>
+                    <div style="font-size:0.8rem; color:#1E3A8A; background:#EFF6FF; border-radius:8px; padding:6px 8px; margin-bottom:10px; line-height:1.35;">
+                        🩺 <b>Good for:</b> {health_fact}
                     </div>
                     <div style="font-size:0.95rem; margin-bottom:10px;">
                         <span style="text-decoration:line-through; color:#9CA3AF; font-size:0.8rem;">₹{item['price']:,.2f}</span>
@@ -503,14 +626,16 @@ def render_ml_prediction_page():
         if cart_items_list:
             st.markdown("#### 🛒 Items Added to Shopping Cart")
             for item in cart_items_list:
-                st.markdown(f"- 🛒 **{item['name']}** — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
+                ben = get_product_benefit(item['id'], item['name'])
+                st.markdown(f"- 🛒 **{item['name']}** — *\"{ben}\"* — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
 
         if wishlist_items_list:
             st.markdown("#### ❤️ Items Added to Wishlist")
             for idx, item in enumerate(wishlist_items_list):
+                ben = get_product_benefit(item['id'], item['name'])
                 col_text, col_act = st.columns([3.5, 1.2])
                 with col_text:
-                    st.markdown(f"- ❤️ **{item['name']}** — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
+                    st.markdown(f"- ❤️ **{item['name']}** — *\"{ben}\"* — Price: ~~₹{item['price']:,.2f}~~ | **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
                 with col_act:
                     if st.button("🛒 Add to Cart", key=f"wish_to_cart_{item['id']}_{idx}", use_container_width=True):
                         prod_dataclass = get_product_by_id(str(item['id']))
@@ -524,9 +649,10 @@ def render_ml_prediction_page():
         if rejected_items_list:
             st.markdown("#### 🔴 Skipped Products")
             for idx, item in enumerate(rejected_items_list):
+                ben = get_product_benefit(item['id'], item['name'])
                 col_text, col_act = st.columns([3.5, 1.2])
                 with col_text:
-                    st.markdown(f"- ❌ **{item['name']}** — Price: **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
+                    st.markdown(f"- ❌ **{item['name']}** — *\"{ben}\"* — Price: **₹{item['final_price']:,.2f}** ({item['discount']:.0f}% OFF)")
                 with col_act:
                     if st.button("❤️ Add to Wishlist", key=f"rej_to_wish_{item['id']}_{idx}", use_container_width=True):
                         prod_dataclass = get_product_by_id(str(item['id']))
